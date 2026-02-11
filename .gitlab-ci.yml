@@ -1,0 +1,73 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  CI_REPOSITORY_URL: 'http://gitlab:28083/$CI_PROJECT_PATH.git'
+  CI_SERVER_URL: 'http://gitlab:28083'
+  
+  # [수정됨] 컨테이너 이름 (Portainer에서 보일 이름)
+  CONTAINER_NAME: "n8n-backend"
+  
+  # [매우 중요] 반드시 "본인아이디/프로젝트명:태그" 형식이어야 합니다.
+  # po12022 계정으로 로그인했으니 반드시 po12022로 시작해야 합니다.
+  IMAGE_NAME: "po12022/n8n-backend:latest"
+
+image: docker:25.0.3
+
+services:
+  - docker:25.0.3-dind
+
+cache:
+  paths:
+    - .pip_cache/
+
+before_script:
+  - apk add --no-cache git ca-certificates
+  - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab:28083/".insteadOf "http://gitlab:28083/"
+  #- echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+  - echo "dhaudtjq1!" | docker login -u "po12022" --password-stdin docker.io
+build_job:
+  stage: build
+  tags:
+    - ci-docker
+  only:
+    - main
+  script:
+    - echo "--- Building Docker Image ---"
+    - docker build -t $IMAGE_NAME .
+    - echo "--- Pushing Docker Image ---"
+    - docker push $IMAGE_NAME
+
+deploy_job:
+  stage: deploy
+  image: docker:25.0.3-cli
+  variables:
+    DOCKER_HOST: 'unix:///var/run/docker.sock'
+  tags:
+    - ci-docker
+  only:
+    - main
+  script:
+    - echo "--- Deploying new container ---"
+    
+    # 1. 최신 이미지 다운로드 (po12022 저장소에서)
+    - docker pull $IMAGE_NAME
+
+    # 2. 기존 컨테이너 삭제
+    - docker stop $CONTAINER_NAME || true
+    - docker rm $CONTAINER_NAME || true
+
+    # 3. 컨테이너 실행
+    # Portainer에는 38000번 포트로 열려있게 설정
+    # 파이썬 서버는 내부에서 8000번으로 동작 (Dockerfile 설정 기준)
+    - |
+      docker run -d \
+      --name $CONTAINER_NAME \
+      --restart always \
+      -p 38000:8000 \
+      --network bridge \
+      -e ENV="production" \
+      $IMAGE_NAME
+
+    - echo "--- Deployment complete! ---"
