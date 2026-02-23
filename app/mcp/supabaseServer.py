@@ -1,5 +1,5 @@
 from fastmcp import FastMCP
-from app.mcp.tools import search_knowledge_base_tool
+from app.mcp.tools import query_knowledge_base
 
 # 1. MCP 서버 인스턴스 생성
 supabase_mcp = FastMCP("supabase Retriever Agent")
@@ -13,4 +13,4 @@ async def query_knowledge_base(query: str) -> str:
     Args:
         query: 검색할 키워드나 질문 문장 (예: "학자금 지급대상이 누구야?")
     """
-    return await search_knowledge_base_tool(query, db_type="supabase")
+    return await query_knowledge_base(query, db_type="supabase")
