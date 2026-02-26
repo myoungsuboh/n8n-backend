@@ -17,3 +17,5 @@ async def search_company_knowledge(query_text: str) -> str:
     """
     
     return await get_search_data(query_text)
+
+

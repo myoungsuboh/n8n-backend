@@ -141,8 +141,9 @@ async def search_target_table(params: SearchQuery) -> List[Dict[str, Any]]:
     
     # 2. 검색할 8개 테이블 목록
     target_collections = [
-        "Welfare_Doc", "Receipt", "Company", "Ceo_message", 
-        "General", "Resource", "Mutual_aid", "Etc"
+        "Ceo_message", "Resource", "Company", "Mutual_aid", "Welfare_Doc", 
+        "Receipt", "Admin_Support", "HR_Order", "Employee_News", "Partnership_PR", 
+        "Solution", "Talent_Recommendation", "Year_End_Tax", "Etc"
     ]
     
     limit_per_table = 3

@@ -17,8 +17,8 @@ async def search_documents(payload: SearchQuery):
         raise HTTPException(status_code=500, detail=str(e))
     
     
-@router.post("/search_company_knowledge")
-async def search_company_knowledge(payload: SearchQuery):
+@router.post("/search_table")
+async def search_table(payload: SearchQuery):
     try:
         results = await search_target_table(payload.query_text)
         
