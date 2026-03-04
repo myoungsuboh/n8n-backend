@@ -143,7 +143,7 @@ async def search_target_table(params: SearchQuery) -> List[Dict[str, Any]]:
     target_collections = [
         "Ceo_message", "Resource", "Company", "Mutual_aid", "Welfare_Doc", 
         "Receipt", "Admin_Support", "HR_Order", "Employee_News", "Partnership_PR", 
-        "Solution", "Talent_Recommendation", "Year_End_Tax", "Etc"
+        "Solution", "Talent_Recommendation", "Year_End_Tax", "Ai", "Etc"
     ]
     
     limit_per_table = 3
