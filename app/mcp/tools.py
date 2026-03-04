@@ -9,7 +9,7 @@ async def query_knowledge_base(query: str, db_type: str = "supabase") -> str:
     """
     params = SearchQuery(
         query_text=query,
-        match_threshold=0.6,
+        match_threshold=0.7,
         match_count=10 
     )
     
@@ -27,6 +27,7 @@ async def get_search_data(query_text: str, db_type: str = "weaviate") -> str:
     # 1. 검색 파라미터 세팅
     params = SearchQuery(
         query_text=query_text,
+        match_threshold=0.7,
         match_count=3 # 최종적으로 Agent에게 넘겨줄 문서 개수
     )
     
