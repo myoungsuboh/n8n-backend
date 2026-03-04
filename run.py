@@ -1,10 +1,15 @@
 import uvicorn
 import os
+import sys
 from dotenv import load_dotenv
 
 # .env 파일 로드 (환경변수 설정)
 load_dotenv()
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+    
 if __name__ == "__main__":
     # 개발 모드인지 확인 (기본값: True)
     # 실제 운영 환경에서는 False로 두는 것이 좋습니다.

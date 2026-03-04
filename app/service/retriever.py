@@ -224,25 +224,37 @@ async def fetch_data_by_ids(table_name: str, ids: Union[str, List[str]]) -> List
         ids = [ids]
         
     try:
+        # 1. 컬렉션 객체 및 설정(Config) 가져오기
         collection = weaviate_client.collections.get(table_name)
+        config = collection.config.get()
         
-        # 1. 이 테이블에 설정된 관계도(Edge) 이름 가져오기
-        edge_name = RELATIONS_MAP.get(table_name)
-        
-        # 2. 관계도가 존재한다면, 부모/자식 데이터도 같이 가져오도록 세팅 (핵심 💡)
         return_references = []
-        
         wq = wvc.query
         
-        if edge_name:
-            return_references.append(
-                wq.QueryReference(
-                    link_on=edge_name,
-                    return_properties=["content", "fileName"] # 연결된 문서의 내용과 파일명
-                )
-            )
+        # 2. 스키마 분석: properties가 아닌 "references"를 바로 순회합니다! (핵심 💡)
+        if config.references:
+            for ref in config.references:
+                edge_name = ref.name
+                # 💡 스키마에 target_collections(리스트) 속성이 있는 경우 = 다중 타겟 (Multi-target)
+                if hasattr(ref, 'target_collections') and ref.target_collections:
+                    for target in ref.target_collections:
+                        return_references.append(
+                            wq.QueryReference.MultiTarget( 
+                                link_on=edge_name,
+                                target_collection=target,
+                                return_properties=["content", "fileName"]
+                            )
+                        )
+                # 💡 단일 타겟 (Single-target)인 경우
+                elif hasattr(ref, 'target_collection') and ref.target_collection:
+                    return_references.append(
+                        wq.QueryReference( 
+                            link_on=edge_name,
+                            return_properties=["content", "fileName"]
+                        )
+                    )
         
-        # 3. ID 배열로 데이터 조회 (GraphQL의 ContainsAny 역할)
+        # 3. 데이터 조회 (동적으로 생성된 return_references 사용)
         result = collection.query.fetch_objects(
             filters=wq.Filter.by_id().contains_any(ids),
             return_references=return_references if return_references else None
