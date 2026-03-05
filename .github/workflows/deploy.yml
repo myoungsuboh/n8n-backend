@@ -1,0 +1,68 @@
+name: Deploy Backend to NCP
+
+# main 브랜치에 코드가 push 될 때 자동 실행 (only: - main 과 동일)
+on:
+  push:
+    branches: ['main']
+
+# 환경 변수 설정 (variables 영역과 동일)
+env:
+  CONTAINER_NAME: 'n8n-backend'
+  IMAGE_NAME: 'po12022/n8n-backend:latest'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest # GitHub가 제공하는 가상 서버 사용
+
+    steps:
+      # 1. GitHub 저장소에서 코드 가져오기
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Docker Hub 로그인 (before_script 영역과 동일)
+      # 주의: $martdept 비밀번호는 보안상 GitHub Secrets에 DOCKER_PASSWORD로 등록하세요!
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: 'po12022'
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 3. 도커 이미지 빌드 및 푸시 (build_job 영역과 동일)
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}
+
+      # 4. NCP 서버에 접속하여 배포 (deploy_job 영역과 동일)
+      - name: Deploy to NCP via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          IMAGE: ${{ env.IMAGE_NAME }}
+          CONTAINER: ${{ env.CONTAINER_NAME }}
+        with:
+          host: ${{ secrets.NCP_HOST }}
+          username: ${{ secrets.NCP_USERNAME }}
+          password: ${{ secrets.NCP_PASSWORD }}
+          envs: IMAGE, CONTAINER
+          script: |
+            echo "--- Deploying new container ---"
+
+            # 1. 최신 이미지 다운로드
+            docker pull $IMAGE
+
+            # 2. 기존 컨테이너 중지 및 삭제
+            docker stop $CONTAINER || true
+            docker rm $CONTAINER || true
+
+            # 3. 새 컨테이너 실행 (동일한 포트 및 네트워크 설정)
+            docker run -d \
+              --name $CONTAINER \
+              --restart always \
+              -p 38000:8000 \
+              --network bridge \
+              -e ENV="production" \
+              $IMAGE
+              
+            echo "--- Deployment complete! ---"

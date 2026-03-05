@@ -3,17 +3,10 @@ import os
 import json
 import weaviate.classes as wvc
 import google.generativeai as genai
-from dotenv import load_dotenv
 from typing import List, Dict, Any, Union
 from app.schemas import SearchQuery
 from app.core.config import GOOGLE_API_KEY
 from app.core.database import supabase, weaviate_client
-
-load_dotenv()
-
-raw_env = os.getenv("RELATIONS_MAP", "{}")
-
-RELATIONS_MAP = json.loads(raw_env)
 
 async def fetch_vector_candidates(db_type: str, vector: List[float], params: SearchQuery, limit: int) -> List[Dict[str, Any]]:
     """
