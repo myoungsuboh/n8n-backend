@@ -69,7 +69,23 @@ async def search_table(payload: SearchQuery):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+# ==========================================
+# n8n 인증 모델 리스트 반환 API
+# ==========================================
+@router.get("/v1/models")
+async def dummy_models():
+    return {
+        "object": "list",
+        "data": [
+            {
+                "id": "HCX-005",
+                "object": "model",
+                "created": 1677610602,
+                "owned_by": "naver-cloud"
+            }
+        ]
+    }
     
 # ==========================================
 # NCP - n8n 통역사 (Proxy) API
