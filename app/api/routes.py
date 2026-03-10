@@ -1,6 +1,8 @@
 # app/api/routes.py
-from fastapi import APIRouter, HTTPException
+import httpx
 from app.schemas import SearchQuery
+from fastapi import APIRouter, HTTPException, Request
+from app.core.config import NCP_CLOVA_URL, NCP_CLOVA_TOKEN, NCP_CLOVA_REQUEST_ID
 from app.service.retriever import search_logic, search_target_table, fetch_data_by_ids
 
 router = APIRouter()
@@ -65,5 +67,70 @@ async def search_table(payload: SearchQuery):
 
         return {"results": formatted_output}
         
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    
+# ==========================================
+# NCP - n8n 통역사 (Proxy) API
+# ==========================================
+@router.post("/v1/chat/completions")
+async def proxy_to_clova(request: Request):
+    try:
+        # 1. n8n (OpenAI Chat Model 노드)에서 넘어온 JSON 데이터 받기
+        openai_data = await request.json()
+        
+        # 2. NCP HCX-005 규격으로 페이로드 변환 (Mapping)
+        ncp_payload = {
+            "messages": openai_data.get("messages", []),
+            "topP": openai_data.get("top_p", 0.8),
+            "temperature": openai_data.get("temperature", 0.5)
+        }
+        
+        # n8n이 MCP Tool(함수) 정보를 보냈다면 NCP 포맷에 맞춰 추가
+        if "tools" in openai_data:
+            ncp_payload["tools"] = openai_data["tools"]
+
+        NCP_HEADERS = {
+            "Authorization": f"Bearer {NCP_CLOVA_TOKEN}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "X-NCP-CLOVASTUDIO-REQUEST-ID": NCP_CLOVA_REQUEST_ID
+        }
+
+        # 3. NCP 서버로 실제 요청 쏘기 (응답 대기시간 30초 넉넉히 설정)
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(NCP_CLOVA_URL, headers=NCP_HEADERS, json=ncp_payload)
+            
+            # 클로바 서버에서 에러를 뱉었을 경우 디버깅을 위해 예외 처리
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=f"NCP API Error: {response.text}")
+                
+            ncp_result = response.json()
+
+        # 4. NCP의 응답을 다시 OpenAI 규격으로 포장해서 n8n에 리턴
+        clova_message = ncp_result.get("result", {}).get("message", {})
+        
+        # 💡 핵심: 클로바가 일반 대답을 한 건지, 아니면 '툴을 써라'고 지시한 건지 상태값 매핑
+        finish_reason = "stop"
+        if "tool_calls" in clova_message:
+            finish_reason = "tool_calls"
+        
+        # OpenAI 표준 포맷으로 최종 조립
+        openai_response = {
+            "id": "chatcmpl-" + ncp_result.get("result", {}).get("id", "clova-proxy"),
+            "object": "chat.completion",
+            "model": openai_data.get("model", "HCX-005"),
+            "choices": [
+                {
+                    "index": 0,
+                    "message": clova_message,
+                    "finish_reason": finish_reason
+                }
+            ]
+        }
+        
+        return openai_response
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
