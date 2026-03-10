@@ -150,36 +150,37 @@ async def search_target_table(params: SearchQuery) -> List[Dict[str, Any]]:
         try:
             collection = weaviate_client.collections.get(collection_name)
             
-            result = collection.query.near_vector(
-                near_vector=vector,
+            result = collection.query.hybrid(
+                query=params.query_text, # Sparse(키워드) 검색을 위한 원본 텍스트
+                vector=vector,           # Dense(의미) 검색을 위한 벡터
+                alpha=0.5,               # 💡 가중치 (0.0: 순수 키워드 ~ 1.0: 순수 벡터. 보통 0.5~0.7 사용)
                 limit=limit_per_table,
-                return_metadata=wvc.query.MetadataQuery(distance=True)
+                return_metadata=wvc.query.MetadataQuery(score=True)
             )
             
             candidates = []
-            max_similarity = 0 # 이 테이블의 1등 점수
+            max_score = 0           # 하이브리드 점수는 높을수록 좋습니다.
             
             # 4. 데이터 변환 및 이 테이블의 '최고 유사도' 찾기
             for obj in result.objects:
-                distance = obj.metadata.distance if obj.metadata.distance is not None else 0
-                similarity = 1 - distance
+                score = obj.metadata.score if obj.metadata.score is not None else 0
                 
                 candidates.append({
                     "id": str(obj.uuid),
                     "collection": collection_name, # 💡 나중에 출처를 밝히기 위해 테이블명 기록
                     "content": obj.properties.get("content", ""),
                     "fileName": obj.properties.get("fileName", ""), # 파일명도 꼭 가져오세요
-                    "similarity": similarity
+                    "similarity": score
                 })
                 
                 # 가장 높은 유사도 갱신
-                if similarity > max_similarity:
-                    max_similarity = similarity
+                if score > max_score:
+                    max_score = score
             
             # 검색 결과가 1개라도 있다면 딕셔너리에 저장
             if candidates:
                 table_results[collection_name] = candidates
-                table_max_scores[collection_name] = max_similarity
+                table_max_scores[collection_name] = max_score
 
         except Exception as e:
             # 특정 테이블이 아직 생성되지 않았거나 에러가 발생해도 멈추지 않고 패스

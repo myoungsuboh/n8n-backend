@@ -26,7 +26,7 @@ before_script:
   - apk add --no-cache git ca-certificates
   - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab:28083/".insteadOf "http://gitlab:28083/"
   #- echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
-  - echo "dhaudtjq1!" | docker login -u "po12022" --password-stdin docker.io
+  - echo '$martdept' | docker login -u "po12022" --password-stdin docker.io
 build_job:
   stage: build
   tags:
