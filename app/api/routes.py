@@ -1,9 +1,9 @@
 # app/api/routes.py
 import httpx
-from app.schemas import SearchQuery
+from app.schemas import SearchQuery, Neo4jSearchQuery
 from fastapi import APIRouter, HTTPException, Request
 from app.core.config import NCP_CLOVA_URL, NCP_CLOVA_TOKEN, NCP_CLOVA_REQUEST_ID
-from app.service.retriever import search_logic, search_target_table, fetch_data_by_ids
+from app.service.retriever import search_logic, search_target_table, fetch_data_by_ids, search_neo4j_graph, embedding_query
 
 router = APIRouter()
 
@@ -70,6 +70,29 @@ async def search_table(payload: SearchQuery):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/search-neo4j")
+async def search_neo4j(payload: Neo4jSearchQuery):
+    """
+    Neo4j Graph DB를 검색하는 API 엔드포인트입니다.
+    """
+    try:
+        # 1. 질문 임베딩 (Gemini)
+        vector = embedding_query(payload)
+        
+        # 2. Neo4j 검색 수행
+        results = await search_neo4j_graph(payload, vector)
+        
+        # 3. 결과 반환
+        return {
+            "status": "success",
+            "count": len(results),
+            "data": results
+        }
+        
+    except Exception as e:
+        print(f"❌ [NEO4J API ERROR] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
 # ==========================================
 # n8n 인증 모델 리스트 반환 API
 # ==========================================
