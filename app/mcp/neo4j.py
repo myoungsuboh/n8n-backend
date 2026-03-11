@@ -8,8 +8,8 @@ neo4j_mcp = FastMCP("neo4j Retriever Agent")
 @neo4j_mcp.tool(name="search_company_knowledge")
 async def search_company_knowledge(
     query_text: str, 
-    category: Optional[str] = None, 
-    file_name: Optional[str] = None
+    category: str = "",
+    file_name: str = ""
 ) -> str:
     """
     회사에 공용 파일 정보 지식인 '사내 업무 지원 정보 neo4j(Graph DB)'를 검색합니다.

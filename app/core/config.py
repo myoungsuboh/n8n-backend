@@ -1,7 +1,7 @@
 # app/core/config.py
 
 # 구글 API 설정
-GOOGLE_API_KEY = "AIzaSyAS26HQAYv7DL_kEbgzZAnKwMy_IsKXCRI"
+GOOGLE_API_KEY = "AIzaSyAi0kZ00tgHk9JBqgIV3fhA3MfqvWPu0Vg"
 
 # 수퍼베이스 설정
 SUPABASE_URL = "https://agybrzjkhmlbfstbljzc.supabase.co"
@@ -13,6 +13,6 @@ NCP_CLOVA_TOKEN= "nv-50c28a33eb5445ba995da398d86155e0Py1p"
 NCP_CLOVA_REQUEST_ID= "466f34ddc4ac49319355349860f60bad"
 
 # neo4j 설정
-NEO4J_URI = "bolt://192.168.0.210:7474"
+NEO4J_URI = "bolt://192.168.0.210:7687"
 NEO4J_USER = "neo4j"
 NEO4J_PASSWORD = "$martdept"
