@@ -1,9 +1,11 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 from fastmcp import FastMCP
-from fastmcp.server.http import create_streamable_http_app
+from contextlib import asynccontextmanager
 from app.api.routes import router as api_router
+from fastapi.middleware.cors import CORSMiddleware
+from fastmcp.server.http import create_streamable_http_app
+
+from app.mcp.neo4j import neo4j_mcp
 from app.mcp.supabaseServer import supabase_mcp
 from app.mcp.weaviateServer import weaviate_mcp
 
@@ -20,6 +22,11 @@ weaviate_app = create_streamable_http_app(
     debug=True
 )
 
+neo4j_app = create_streamable_http_app(
+    server=neo4j_mcp,
+    streamable_http_path="/sse",
+    debug=True
+)
 
 # 2. FastAPI 수명주기
 @asynccontextmanager
@@ -30,7 +37,9 @@ async def combined_lifespan(app: FastAPI):
     # 2. MCP의 lifespan 실행 (context manager 호출)
     async with supabase_app.lifespan(app):
         async with weaviate_app.lifespan(app):
-            yield
+            async with neo4j_app.lifespan(app):
+                print("🚀 All Systems Ready: API, Supabase, Weaviate, Neo4j")
+                yield
         
     # 3. 종료 로그
     print("🛑 System Stopped")
@@ -51,5 +60,6 @@ app.add_middleware(
 app.include_router(api_router)
 
 # 5. MCP 앱을 /mcp 경로에 마운트
-app.mount("/supabase/mcp", supabase_app) # 외부 VB
-app.mount("/weaviate/mcp", weaviate_app) # 사내 VB
+app.mount("/supabase/mcp", supabase_app) # 외부 Vector DB (Supabase)
+app.mount("/weaviate/mcp", weaviate_app) # 사내 Vector DB (Weaviate)
+app.mount("/neo4j/mcp", neo4j_app) # 사내 Graph DB (Neo4j)

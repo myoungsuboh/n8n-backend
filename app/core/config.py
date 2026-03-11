@@ -11,3 +11,8 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 NCP_CLOVA_URL= "https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005"
 NCP_CLOVA_TOKEN= "nv-50c28a33eb5445ba995da398d86155e0Py1p"
 NCP_CLOVA_REQUEST_ID= "466f34ddc4ac49319355349860f60bad"
+
+# neo4j 설정
+NEO4J_URI = "bolt://192.168.0.210:7474"
+NEO4J_USER = "neo4j"
+NEO4J_PASSWORD = "$martdept"

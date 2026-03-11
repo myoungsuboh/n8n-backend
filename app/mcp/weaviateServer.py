@@ -1,5 +1,5 @@
 from fastmcp import FastMCP
-from app.mcp.tools import get_search_data, query_knowledge_base
+from app.mcp.tools import get_search_data
 
 # 1. MCP 서버 인스턴스 생성
 weaviate_mcp = FastMCP("weaviate Retriever Agent")

@@ -1,6 +1,8 @@
 # app/mcp/tools.py
-from app.service.retriever import search_logic, search_target_table, fetch_data_by_ids
+from typing import Optional
 from app.schemas import SearchQuery
+from app.schemas import Neo4jSearchQuery
+from app.service.retriever import search_logic, search_target_table, fetch_data_by_ids, embedding_query, search_neo4j_graph
 
 async def query_knowledge_base(query: str, db_type: str = "supabase") -> str:
     """
@@ -67,4 +69,52 @@ async def get_search_data(query_text: str) -> str:
         # 구분선 추가로 AI가 문맥을 헷갈리지 않게 처리
         formatted_output += "-" * 40 + "\n\n"
 
+    return formatted_output
+
+
+async def get_search_data(query_text: str, category: Optional[str] = None, file_name: Optional[str] = None) -> str:
+    """
+    Agent의 요청을 받아 임베딩 -> Neo4j 하이브리드 검색 -> 문자열 포맷팅을 수행합니다.
+    """
+    print(f"🔍 [SEARCH START] Query: '{query_text}', Category: '{category}', File: '{file_name}'")
+    
+    # 1. 전달받은 인자들로 신규 Neo4jSearchQuery 객체(DTO) 생성
+    params = Neo4jSearchQuery(
+        query_text=query_text,
+        category=category,
+        file_name=file_name,
+        match_threshold=0.6,
+        match_count=5 
+    )
+    
+    # 2. 컴포넌트 재사용: 질문 임베딩 (객체 전달)
+    try:
+        query_vector = embedding_query(params)
+    except Exception as e:
+        print(f"[EMBEDDING ERROR] {e}")
+        return "오류: 검색어 임베딩 처리 중 문제가 발생했습니다."
+
+    # 3. Neo4j 검색 로직 호출 (객체 + 벡터 전달)
+    raw_candidates = await search_neo4j_graph(params=params, vector=query_vector)
+    
+    # 4. 결과 검증 및 필터링
+    # 결과가 아예 없거나, 1등 후보의 유사도가 match_threshold 이하인 경우 컷팅
+    if not raw_candidates or raw_candidates[0].get('score', 0) < params.match_threshold:
+        print(f"유사도 미달 또는 결과 없음 (최고 점수: {raw_candidates[0].get('score', 0) if raw_candidates else 0:.4f})")
+        return "관련된 사내 데이터를 찾을 수 없습니다."
+
+    # 5. Agent가 읽기 좋게 문자열(String) 포장
+    formatted_output = "다음은 사내 데이터베이스 검색 결과입니다. 이를 바탕으로 답변하세요.\n\n"
+    
+    for idx, doc in enumerate(raw_candidates, 1):
+        c_name = doc.get('category', '분류없음')
+        f_name = doc.get('fileName', '알 수 없음')
+        content = doc.get('content', '')
+        score = doc.get('score', 0.0)
+        
+        formatted_output += f"### 후보 {idx} (유사도: {score:.4f})\n"
+        formatted_output += f"- [출처]: 카테고리 '{c_name}', 파일명 '{f_name}'\n"
+        formatted_output += f"- [내용]: {content}\n\n"
+        
+    print(f"✅ [SEARCH DONE] Found: {len(raw_candidates)} results.")
     return formatted_output

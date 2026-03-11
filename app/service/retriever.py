@@ -3,9 +3,10 @@ import os
 import json
 import weaviate.classes as wvc
 import google.generativeai as genai
-from typing import List, Dict, Any, Union
-from app.schemas import SearchQuery
-from app.core.config import GOOGLE_API_KEY
+from typing import List, Dict, Any, Union, Optional
+from app.schemas import SearchQuery, Neo4jSearchQuery
+from neo4j import AsyncGraphDatabase 
+from app.core.config import GOOGLE_API_KEY, NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
 from app.core.database import supabase, weaviate_client
 
 async def fetch_vector_candidates(db_type: str, vector: List[float], params: SearchQuery, limit: int) -> List[Dict[str, Any]]:
@@ -57,18 +58,17 @@ def get_ngrams(text: str) -> set:
         grams.add(clean_text[i:i+2])
     return grams
 
-def embedding_query(params: SearchQuery) -> List[float]:
+def embedding_query(params: Union[SearchQuery, Neo4jSearchQuery]) -> List[float]:
     if GOOGLE_API_KEY:
         genai.configure(api_key=GOOGLE_API_KEY)
         
     embedding_result = genai.embed_content(
         model="models/gemini-embedding-001",
-        content=params.query_text,
+        content=params.query_text, # 두 스키마(SearchQuery, Neo4jSearchQuery) 모두 query_text를 가지고 있으므로 정상 작동
         task_type="retrieval_query"
     )
 
     return embedding_result['embedding']
-
 
 async def search_logic(params: SearchQuery, db_type: str = "supabase") -> List[Dict[str, Any]]:
     
@@ -283,3 +283,36 @@ async def fetch_data_by_ids(table_name: str, ids: Union[str, List[str]]) -> List
     except Exception as e:
         print(f"⚠️ [{table_name}] ID 기반 데이터 조회 중 에러 발생: {e}")
         return []
+    
+
+async def search_neo4j_graph(params: Neo4jSearchQuery, vector: List[float]) -> List[Dict[str, Any]]:
+    """Neo4jSearchQuery 스키마와 임베딩 벡터를 받아 Neo4j 하이브리드 검색을 수행합니다."""
+    
+    # 💡 $category와 $file_name에 None이 들어오면 IS NULL 처리를 통해 전체 검색으로 동작합니다.
+    cypher_query = """
+    CALL db.index.vector.queryNodes('chunk_vector_index', $limit, $query_embedding)
+    YIELD node AS c, score
+    MATCH (d:Document)-[:HAS_CHUNK]->(c)
+    WHERE ($category IS NULL OR d.category = $category)
+      AND ($file_name IS NULL OR d.fileName = $file_name)
+    RETURN d.fileName AS fileName, 
+           d.category AS category, 
+           c.content AS content, 
+           score
+    ORDER BY score DESC
+    """
+    
+    driver = AsyncGraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+    
+    try:
+        async with driver.session() as session:
+            result = await session.run(
+                cypher_query, 
+                limit=params.match_count,       # 스키마에서 매치 카운트 가져오기
+                query_embedding=vector,         # 외부에서 주입받은 임베딩 벡터
+                category=params.category,       # 스키마에서 카테고리 가져오기 (없으면 None)
+                file_name=params.file_name      # 스키마에서 파일명 가져오기 (없으면 None)
+            )
+            return await result.data()
+    finally:
+        await driver.close()
