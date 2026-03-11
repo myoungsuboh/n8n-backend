@@ -1,7 +1,16 @@
-import google.generativeai as genai
+import os
 import weaviate
+import google.generativeai as genai
+from dotenv import load_dotenv
 from supabase import create_client, Client
-from app.core.config import GOOGLE_API_KEY, SUPABASE_URL, SUPABASE_KEY
+
+load_dotenv()
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 # 1. Google Gemini 설정
 genai.configure(api_key=GOOGLE_API_KEY)

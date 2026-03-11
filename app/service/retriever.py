@@ -1,13 +1,23 @@
 import re
 import os
-import json
-import weaviate.classes as wvc
-import google.generativeai as genai
+from dotenv import load_dotenv
 from typing import List, Dict, Any, Union, Optional
 from app.schemas import SearchQuery, Neo4jSearchQuery
 from neo4j import AsyncGraphDatabase 
-from app.core.config import GOOGLE_API_KEY, NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
 from app.core.database import supabase, weaviate_client
+
+import weaviate.classes as wvc
+import google.generativeai as genai
+
+load_dotenv()
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+NEO4J_URI = os.getenv("NEO4J_URI")
+
+NEO4J_USER = os.getenv("NEO4J_USER")
+
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
 async def fetch_vector_candidates(db_type: str, vector: List[float], params: SearchQuery, limit: int) -> List[Dict[str, Any]]:
     """
@@ -301,13 +311,12 @@ async def search_neo4j_graph(params: Neo4jSearchQuery, vector: List[float]) -> L
     cypher_query = """
     CALL db.index.vector.queryNodes('chunk_vector_index', $limit, $query_embedding)
     YIELD node AS c, score
-    MATCH (d:Document)-[:HAS_CHUNK]->(c)
-    WHERE ($category IS NULL OR d.category = $category)
-      AND ($file_name IS NULL OR d.fileName = $file_name)
+    // MATCH 부분을 OPTIONAL로 바꿔서 Document가 연결 안 되어도 일단 결과를 봅니다.
+    OPTIONAL MATCH (d:Document)-[:HAS_CHUNK]->(c)
     RETURN d.fileName AS fileName, 
-           d.category AS category, 
-           c.content AS content, 
-           score
+        d.category AS category, 
+        c.content AS content, 
+        score
     ORDER BY score DESC
     """
     

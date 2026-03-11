@@ -1,9 +1,18 @@
 # app/api/routes.py
+import os
 import httpx
+from dotenv import load_dotenv
 from app.schemas import SearchQuery, Neo4jSearchQuery
 from fastapi import APIRouter, HTTPException, Request
-from app.core.config import NCP_CLOVA_URL, NCP_CLOVA_TOKEN, NCP_CLOVA_REQUEST_ID
 from app.service.retriever import search_logic, search_target_table, fetch_data_by_ids, search_neo4j_graph, embedding_query
+
+load_dotenv()
+
+NCP_CLOVA_URL = os.getenv("NCP_CLOVA_URL")
+
+NCP_CLOVA_TOKEN = os.getenv("NCP_CLOVA_TOKEN")
+
+NCP_CLOVA_REQUEST_ID = os.getenv("NCP_CLOVA_REQUEST_ID")
 
 router = APIRouter()
 
