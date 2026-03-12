@@ -83,7 +83,7 @@ async def get_search_data(query_text: str, category: Optional[str] = None, file_
         query_text=query_text,
         category=category,
         file_name=file_name,
-        match_threshold=0.6,
+        match_threshold=0.8,
         match_count=5 
     )
     
@@ -103,18 +103,45 @@ async def get_search_data(query_text: str, category: Optional[str] = None, file_
         print(f"유사도 미달 또는 결과 없음 (최고 점수: {raw_candidates[0].get('score', 0) if raw_candidates else 0:.4f})")
         return "관련된 사내 데이터를 찾을 수 없습니다."
 
-    # 5. Agent가 읽기 좋게 문자열(String) 포장
+    # 5. Agent가 읽기 좋게 문자열(String) 포장 (수정된 부분)
     formatted_output = "다음은 사내 데이터베이스 검색 결과입니다. 이를 바탕으로 답변하세요.\n\n"
     
     for idx, doc in enumerate(raw_candidates, 1):
-        c_name = doc.get('category', '분류없음')
+        # 쿼리에서 category 반환을 생략했다면 '분류없음'으로 기본 처리
+        c_name = doc.get('category', '분류없음') 
         f_name = doc.get('fileName', '알 수 없음')
-        content = doc.get('content', '')
         score = doc.get('score', 0.0)
         
+        # 새롭게 바뀐 리스트 형태의 데이터 추출
+        primary_content_list = doc.get('primaryContent', [])
+        supplemental_context = doc.get('supplementalContext', [])
+        
+        # 핵심 내용 배열을 하나의 텍스트로 결합 (줄바꿈 또는 띄어쓰기)
+        if isinstance(primary_content_list, list):
+            primary_text = " ".join(primary_content_list)
+        else:
+            primary_text = str(primary_content_list)
+
         formatted_output += f"### 후보 {idx} (유사도: {score:.4f})\n"
-        formatted_output += f"- [출처]: 카테고리 '{c_name}', 파일명 '{f_name}'\n"
-        formatted_output += f"- [내용]: {content}\n\n"
+        formatted_output += f"- [출처]: 파일명 '{f_name}'\n"
+        formatted_output += f"- [핵심 내용]:\n  {primary_text}\n"
+        
+        # 연관 문서 배열 파싱 (리스트 안의 리스트 구조 해제)
+        if supplemental_context:
+            formatted_output += "- [연관 내용]:\n"
+            for doc_chunks in supplemental_context:
+                if isinstance(doc_chunks, list):
+                    for chunk in doc_chunks:
+                        source = chunk.get('source', '알 수 없음')
+                        text = chunk.get('text', '')
+                        formatted_output += f"  * [출처: {source}] {text}\n"
+                # 혹시 1차원 딕셔너리로 들어올 경우 대비
+                elif isinstance(doc_chunks, dict):
+                    source = doc_chunks.get('source', '알 수 없음')
+                    text = doc_chunks.get('text', '')
+                    formatted_output += f"  * [출처: {source}] {text}\n"
+                    
+        formatted_output += "\n"
         
     print(f"✅ [SEARCH DONE] Found: {len(raw_candidates)} results.")
     return formatted_output

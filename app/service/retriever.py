@@ -299,16 +299,69 @@ async def search_neo4j_graph(params: Neo4jSearchQuery, vector: List[float]) -> L
     """Neo4jSearchQuery 스키마와 임베딩 벡터를 받아 Neo4j 하이브리드 검색을 수행합니다."""
     
     # 💡 $category와 $file_name에 None이 들어오면 IS NULL 처리를 통해 전체 검색으로 동작합니다.
+    # cypher_query = """
+    # CALL db.index.vector.queryNodes('chunk_vector_index', $limit, $query_embedding)
+    # YIELD node AS c, score
+    # // MATCH 부분을 OPTIONAL로 바꿔서 Document가 연결 안 되어도 일단 결과를 봅니다.
+    # OPTIONAL MATCH (d:Document)-[:HAS_CHUNK]->(c)
+    # RETURN d.fileName AS fileName, 
+    #     d.category AS category, 
+    #     c.content AS content, 
+    #     score
+    # ORDER BY score DESC
+    # """
+    
     cypher_query = """
+    // 1. 벡터 검색으로 시작점(Anchor) 찾기
     CALL db.index.vector.queryNodes('chunk_vector_index', $limit, $query_embedding)
     YIELD node AS c, score
-    // MATCH 부분을 OPTIONAL로 바꿔서 Document가 연결 안 되어도 일단 결과를 봅니다.
-    OPTIONAL MATCH (d:Document)-[:HAS_CHUNK]->(c)
-    RETURN d.fileName AS fileName, 
-        d.category AS category, 
-        c.content AS content, 
+
+    // 2. 시작점이 속한 원본 문서와 관계 노드(Date, Category) 찾기
+    MATCH (d:Document)-[:HAS_CHUNK]->(c)
+    OPTIONAL MATCH (d)-[:CREATED_ON]->(dateNode:Date)
+    OPTIONAL MATCH (d)-[:IN_CATEGORY]->(catNode:Category)
+
+    // 3. 원본 6줄 청크의 위아래 문맥(Windowing) 병합 (-2 ~ +2)
+    OPTIONAL MATCH (d)-[:HAS_CHUNK]->(ctxChunk:Chunk)
+    WHERE ctxChunk.lineIndex >= c.lineIndex - 2 AND ctxChunk.lineIndex <= c.lineIndex + 2
+    WITH d, c, dateNode, catNode, score, 
+        collect(ctxChunk.content) AS primaryContextList // 위아래 5개 청크 (약 30줄)
+
+    // 4. 서브쿼리를 통한 지능형 확장
+    CALL {
+        WITH d, dateNode, catNode
+        
+        // 연관 문서 매칭
+        OPTIONAL MATCH (relatedDoc:Document)
+        WHERE relatedDoc <> d 
+        AND (
+            (catNode IS NOT NULL AND (relatedDoc)-[:IN_CATEGORY]->(catNode)) 
+            OR 
+            (dateNode IS NOT NULL AND (relatedDoc)-[:CREATED_ON]->(dateNode))
+            )
+        
+        // 연관 문서를 5개까지 넉넉하게 확보
+        WITH relatedDoc LIMIT 5
+        
+        OPTIONAL MATCH (relatedDoc)-[:HAS_CHUNK]->(relatedChunk:Chunk)
+        
+        // 문서의 앞부분(서론)부터 가져오도록 정렬
+        WITH relatedDoc, relatedChunk
+        ORDER BY relatedDoc.fileName, relatedChunk.lineIndex ASC
+        
+        // 각 문서당 상위 5개의 청크(약 30줄)를 묶어서 리스트화
+        WITH relatedDoc, collect({source: relatedDoc.fileName, text: relatedChunk.content})[0..4] AS docChunks
+        RETURN collect(docChunks) AS supplementalContext
+    }
+
+    // 5. 최종 결과 반환
+    RETURN d.fileName AS fileName,
+        c.lineIndex AS lineIndex,
+        primaryContextList AS primaryContent, // 6줄 한계 극복 (앞뒤 문맥 포함)
+        supplementalContext,                  // 연관 문서 5개의 도입부 내용들
         score
     ORDER BY score DESC
+    LIMIT $limit
     """
     
     driver = AsyncGraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))

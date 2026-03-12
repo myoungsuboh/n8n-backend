@@ -12,7 +12,7 @@ class SearchQuery(BaseModel):
 # 2. 신규 Graph DB (Neo4j) 전용 스키마
 class Neo4jSearchQuery(BaseModel):
     query_text: str
-    match_threshold: float = 0.6
+    match_threshold: float = 0.8
     match_count: int = 5
     category: Optional[str] = None
     file_name: Optional[str] = None
