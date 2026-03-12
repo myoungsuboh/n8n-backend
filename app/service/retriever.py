@@ -1,13 +1,13 @@
 import re
 import os
+import weaviate.classes as wvc
+import google.generativeai as genai
+
 from dotenv import load_dotenv
 from typing import List, Dict, Any, Union, Optional
 from app.schemas import SearchQuery, Neo4jSearchQuery
 from neo4j import AsyncGraphDatabase 
 from app.core.database import supabase, weaviate_client
-
-import weaviate.classes as wvc
-import google.generativeai as genai
 
 load_dotenv()
 
@@ -78,16 +78,7 @@ def embedding_query(params: Union[SearchQuery, Neo4jSearchQuery]) -> List[float]
         task_type="retrieval_query"
     )
 
-    full_vector = embedding_result['embedding']
-    
-    # 임베딩 API가 1024차원을 반환하더라도, Neo4j 인덱스는 768차원이므로 앞의 768차원만 사용합니다.
-    # gemini model이 3024차원을 반환하는 경우도 대비하여, 항상 768차원으로 자르는 안전장치입니다.
-    final_vector = full_vector[:768]
-    
-    # 디버깅 확인용
-    print(f"DEBUG: Original Dim: {len(full_vector)} -> Target Dim: {len(final_vector)}")
-    
-    return final_vector
+    return embedding_result['embedding']
 
 async def search_logic(params: SearchQuery, db_type: str = "supabase") -> List[Dict[str, Any]]:
     

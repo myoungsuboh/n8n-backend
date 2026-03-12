@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from fastmcp import FastMCP
 from contextlib import asynccontextmanager
 from app.api.routes import router as api_router
 from fastapi.middleware.cors import CORSMiddleware
