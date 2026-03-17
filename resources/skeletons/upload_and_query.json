@@ -1,0 +1,1037 @@
+{
+  "description": "이 템플릿은 PDF 업로드 및 Neo4j 저장용입니다.",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "### 📚 데이터 저장",
+        "height": 508,
+        "width": 2588,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -368,
+        176
+      ],
+      "typeVersion": 1,
+      "id": "e09c7bd8-54c2-4a18-9e8f-960eee6984e7",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "documentType": "image_url",
+        "binaryProperty": "={{ $('Webhook').item.binary.data}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mistralAi",
+      "typeVersion": 1,
+      "position": [
+        784,
+        208
+      ],
+      "id": "fabdc9a0-53ce-46e9-a5d1-d1179f5ef85b",
+      "name": "이미지 변환",
+      "alwaysOutputData": false,
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "uNLcaqbvvMNF3cQl",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "binaryProperty": "={{ $('Webhook').item.binary.data}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mistralAi",
+      "typeVersion": 1,
+      "position": [
+        784,
+        400
+      ],
+      "id": "b56dfe39-db6a-465f-b93b-7ccb3774f622",
+      "name": "문서 변환",
+      "alwaysOutputData": false,
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "uNLcaqbvvMNF3cQl",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### 📚 사용자 검색",
+        "height": 636,
+        "width": 1628,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -368,
+        688
+      ],
+      "typeVersion": 1,
+      "id": "7a711e47-f416-4dbb-ae11-352b404e15f6",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f32460f7-ce63-4f29-8dfe-fab78790219e",
+              "leftValue": "={{ $node[\"Webhook\"].binary.data.fileExtension}}",
+              "rightValue": "image",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "8e2d9802-61f0-4183-93db-b55a8efee742",
+              "leftValue": "={{ $node[\"Webhook\"].binary.data.fileExtension}}",
+              "rightValue": "jpg",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "019ffb4f-9be7-4a30-a6ec-dbc1e40adcb2",
+              "leftValue": "={{ $node[\"Webhook\"].binary.data.fileExtension}}",
+              "rightValue": "png",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        304
+      ],
+      "id": "a83013f0-f9db-4216-98d0-a6c413ff56c0",
+      "name": "업로드 파일 타입 체크"
+    },
+    {
+      "parameters": {
+        "content": "상위 노드(Document) 리스트 조회 쿼리",
+        "height": 224,
+        "width": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -64,
+        -336
+      ],
+      "typeVersion": 1,
+      "id": "083e8ed5-065c-4bed-9d7b-fcf907646116",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Graph DB 데이터 확인용\n\n[상위 노드(Document) 리스트 조회 쿼리]\nMATCH (d:Document)\nRETURN d.fileName AS fileName, d.category AS category, d.updatedAt AS updatedAt\nORDER BY d.updatedAt DESC\n\n\n\n[상위 노드에 연결된 하위 노드(Chunk) 수 조회 쿼리]\nMATCH (d:Document {fileName: '문서 기반 AI 질의응답 시스템 개발_요구사항 분석.pptx'})-[:HAS_CHUNK]->(c:Chunk)\nRETURN d.fileName AS fileName, count(c) AS chunkCount\n\n\n[전체 노드 삭제]\nMATCH (n)\nDETACH DELETE n\n\n\n\n[특정 상위 노드 & 연결된 하위 노드(Chunk) 전체 삭제 쿼리]\nMATCH (d:Document {fileName: '문서 기반 AI 질의응답 시스템 개발_요구사항 분석.pptx'})\nOPTIONAL MATCH (d)-[:HAS_CHUNK]->(c:Chunk)\nDETACH DELETE d, c\n\n\n\n[데이터 저장]\nUNWIND [ ${cypherDataList.join(',\\n  ')} ] AS item\nMERGE (d:Document {fileName: item.fileName})\nSET d.category = item.category, d.updatedAt = datetime()\n\nCREATE (c:Chunk {\n    content: item.content,\n    lineIndex: item.lineIndex,\n    embedding: item.embedding\n})\n\nMERGE (d)-[:HAS_CHUNK]->(c)\n\nRETURN count(c) as totalInserted\n\n\n\n\n[Neo4j에 벡터 인덱스(Vector Index) 생성하기]\nCREATE VECTOR INDEX chunk_vector_index IF NOT EXISTS\nFOR (c:Chunk)\nON (c.embedding)\nOPTIONS {\n  indexConfig: {\n    `vector.dimensions`: 3072,       // Gemini-embedding-001의 차원 수\n    `vector.similarity_function`: 'cosine' // 코사인 유사도 사용\n  }\n}\n\n\n\n[벡터 인덱스(Vector Index) 조회]\nSHOW INDEXES \nYIELD name, type, state, properties, options\nWHERE name = 'chunk_vector_index'\n\n\n\n[저장된 하위노드들의 Vector  dimension 확인 ]\nMATCH (c:Chunk)\nRETURN size(c.embedding) AS dimension, count(*) AS count\n\n\n\n[분류 기준]\n아래 키워드가 포함되거나 연관된 경우 해당 카테고리로 분류해. 파일명, 확장자, 텍스트 내용의 문맥을 종합적으로 판단할 것.\n1. CEO: 창립기념, 신년사, 대표이사 메시지, 타운홀 미팅 자료, 경영 방침, CEO 서신\n2. 자료실: 소개서, 양식, 가이드, 홍보, 학습자료, 프린트, 장비사용, 장비관리, 매뉴얼, 업무용 템플릿, 참조용 문서\n3. 사내소식: 뉴스, 뉴스레터, 일반 공지, 사내외 주요 이슈, 웹진, 모집, 신년회, 송년회, 보도자료 공유, 명절, 우수사원, 사내소식지, 담담, 입사자, 사내 행사 안내, 조직 문화 캠페인\n4. 상조: 상조, 상조회, 경조사 지원금 기준, 상조회 가입/탈퇴, 상조용품 신청 안내\n5. 사내규정: 규정, 취업규칙, 복무규정, 보안규정, 윤리강령, 사내 지침 및 내규, 가이드라인\n6. 영수증: 영수증, 카드, 결제, 매출전표, 법인카드, 식대, 교통비, 정산, Invoice, 지출 증빙, 청구서, 거래명세서\n7. 전사지원업무: \n 인사, 총무, 회계, 예산, 경비, FAQ 관리\n아마란스, Brilliant, 총무, 비품 신청, 명함 제작, 시설 예약, 회의실 대여, 차량 관리, 사원증 발급, OA기기 신청 및 수리\n8. 인사발령: 승진, 전보, 파견, 복직, 휴직, 퇴직, 발령장, 인사 이동 내역, 조직 개편\n9. 사우소식: 임직원 결혼/부고/출산 알림, 동호회 소식, 임직원 인터뷰, 부서 회식, 사내 게시판 일상 공유\n10. 제휴 및 홍보: MOU, 업무협약, 제휴처 안내, 외부 홍보물, 브로셔, 대외 보도자료, 파트너십, 광고 소재\n11. 솔루션: 자사 솔루션, 제품 업데이트, 패치 노트, 시스템 장애 안내, 신규 기능 소개, 제품 릴리즈 노트\n12. 인재추천: 사내 추천 제도, 채용 공고 공유, 추천인 포상 안내, 인재풀 등록, 지인 추천 프로그램\n13. 연말정산: 연말정산 안내, 소득공제, 세액공제, 홈택스, 원천징수영수증, 간소화 서비스, 부양가족 등록\n14. AI: AI 관련 내용\n15. 기타: 위 1~14번 기준 중 그 어디에도 해당하지 않는 모든 파일\n\n\n[기준별 테이블명]\n각 카테고리에 1:1로 매칭되는 테이블 이름이야.\n1. CEO: Ceo_message\n2. 자료실: Resource\n3. 사내소식: Company\n4. 상조: Mutual_aid\n5. 사내규정: Welfare_Doc\n6. 영수증: Receipt\n7. 전사지원업무: Admin_Support\n8. 인사발령: HR_Order\n9. 사우소식: Employee_News\n10. 제휴 및 홍보: Partnership_PR\n11. 솔루션: Solution\n12. 인재추천: Talent_Recommendation\n13. 연말정산: Year_End_Tax\n14. AI: ai\n15. 기타: Etc",
+        "height": 1184,
+        "width": 960
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1264,
+        688
+      ],
+      "typeVersion": 1,
+      "id": "cfb687fc-c1bc-4b2b-8a68-1216a353cf67",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=너는 '파일 분류 전문 AI 비서'야.\n아래에 입력된 [파일명]을 분석해서, 가장 적절한 [카테고리]로 분류하고 매핑되는 [테이블명]을 찾는 업무를 수행해.\n\n[입력 데이터]\n파일명: {{ $('Webhook').item.binary.data.fileName}}\n\n[분류 기준]\n아래 키워드가 포함되거나 연관된 경우 해당 카테고리로 분류해. 파일명, 확장자, 텍스트 내용의 문맥을 종합적으로 판단할 것.\n1. CEO: 창립기념, 신년사, 대표이사 메시지, 타운홀 미팅 자료, 경영 방침, CEO 서신\n2. 자료실: 소개서, 양식, 가이드, 홍보, 학습자료, 프린트, 장비사용, 장비관리, 매뉴얼, 업무용 템플릿, 참조용 문서\n3. 사내소식: 뉴스, 뉴스레터, 일반 공지, 사내외 주요 이슈, 웹진, 모집, 신년회, 송년회, 보도자료 공유, 명절, 우수사원, 사내소식지, 담담, 입사자, 사내 행사 안내, 조직 문화 캠페인\n4. 상조: 상조, 상조회, 경조사 지원금 기준, 상조회 가입/탈퇴, 상조용품 신청 안내\n5. 사내규정: 규정, 취업규칙, 복무규정, 보안규정, 윤리강령, 사내 지침 및 내규, 가이드라인\n6. 영수증: 영수증, 카드, 결제, 매출전표, 법인카드, 식대, 교통비, 정산, Invoice, 지출 증빙, 청구서, 거래명세서\n7. 전사지원업무: \n 인사, 총무, 회계, 예산, 경비, FAQ 관리\n아마란스, Brilliant, 총무, 비품 신청, 명함 제작, 시설 예약, 회의실 대여, 차량 관리, 사원증 발급, OA기기 신청 및 수리\n8. 인사발령: 승진, 전보, 파견, 복직, 휴직, 퇴직, 발령장, 인사 이동 내역, 조직 개편\n9. 사우소식: 임직원 결혼/부고/출산 알림, 동호회 소식, 임직원 인터뷰, 부서 회식, 사내 게시판 일상 공유\n10. 제휴 및 홍보: MOU, 업무협약, 제휴처 안내, 외부 홍보물, 브로셔, 대외 보도자료, 파트너십, 광고 소재\n11. 솔루션: 자사 솔루션, 제품 업데이트, 패치 노트, 시스템 장애 안내, 신규 기능 소개, 제품 릴리즈 노트\n12. 인재추천: 사내 추천 제도, 채용 공고 공유, 추천인 포상 안내, 인재풀 등록, 지인 추천 프로그램\n13. 연말정산: 연말정산 안내, 소득공제, 세액공제, 홈택스, 원천징수영수증, 간소화 서비스, 부양가족 등록\n14. AI: AI 관련 내용\n15. 기타: 위 1~14번 기준 중 그 어디에도 해당하지 않는 모든 파일\n\n[기준별 테이블명]\n각 카테고리에 1:1로 매칭되는 테이블 이름이야.\n1. CEO: Ceo_message\n2. 자료실: Resource\n3. 사내소식: Company\n4. 상조: Mutual_aid\n5. 사내규정: Welfare_Doc\n6. 영수증: Receipt\n7. 전사지원업무: Admin_Support\n8. 인사발령: HR_Order\n9. 사우소식: Employee_News\n10. 제휴 및 홍보: Partnership_PR\n11. 솔루션: Solution\n12. 인재추천: Talent_Recommendation\n13. 연말정산: Year_End_Tax\n14. AI: Ai\n15. 기타: Etc\n\n[작성 규칙 (매우 중요)]\n1. 다른 부연 설명이나 인사말, 모든 줄바꿈(\\n), 탭(\\t), 코드 블록 기호(```json)를 절대 사용하지 마.\n2. 오직 아래 구조를 가진 순수한 JSON 데이터 객체 하나만 출력해.\n{\n  category: \"\",\n  fileName: \"\",\n  tableName: \"\"\n}\n3. `category` 필드에는 위 [분류 기준]에 있는 한글 카테고리 이름(일반, CEO 등) 중 하나만 정확히 적어.\n4. `fileName` 필드에는 {{ $('Webhook').item.binary.data.fileName }} 적어.\n5. `tableName` 필드에는 위에서 결정된 [카테고리]와 짝이 되는 [기준별 테이블명](예: Welfare_Doc)을 정확히 찾아서 적어.\n6. category, fileName, tableName 모두 대소문자 구분을 꼭 해!.\n7. 응답은 반드시 유효한 JSON 형식이어야 하며, 중괄호 {}로 시작해서 끝나야 함. 프로그래밍에서 바로 JSON.parse()를 할 수 있는 상태여야 함.\n\n자, 이제 파일명을 분석해서 결과를 줘.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        192,
+        304
+      ],
+      "id": "5ac266ba-7355-4f77-ac9f-a217c57277fb",
+      "name": "문서 카테고리 분류"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "neo4j/fileUpload",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -304,
+        304
+      ],
+      "id": "b01f7b00-3774-4d24-9a76-70e33adb5863",
+      "name": "Webhook",
+      "webhookId": "b22fb1e7-ede9-4223-ba92-b240640df25a"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -64,
+        304
+      ],
+      "id": "ca5076ba-beb4-4c1b-8adf-7d69aeaf357e",
+      "name": "Extract from File",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst pages = $input.first().json.pages || [];\n\nconst fileName = JSON.parse($('문서 카테고리 분류').first().json.output).fileName || 'unknown';\n  \nconst result = [];\n\nconst CHUNK_SIZE = 6;\nconst OVERLAP = 2;    // 다음 묶음이랑 2줄은 겹치게 함 (문맥 끊김 방지)\n\nconst STEP = CHUNK_SIZE - OVERLAP;\n\nfor (const page of pages) {\n  if (!page.markdown) continue;\n\n  const lines = page.markdown\n    .split('\\n')\n    .map(line => line.replace(/\\|/g, ' ').trim())\n    .filter(line => line.length > 0);\n\n  for (let i = 0; i < lines.length; i += STEP) {\n    const chunkLines = lines.slice(i, i + CHUNK_SIZE);\n    \n    const cleanContent = chunkLines.join(' ')\n        .replace(/!\\[.*?\\]\\(.*?\\)/g, '') // 이미지 태그 제거\n        .replace(/\\[.*?\\]\\(.*?\\)/g, '')  // 링크 텍스트만 남기고 경로 제거\n        .replace(/\\s+/g, ' ')            // 중복 공백 제거\n        .trim();\n\n    if (cleanContent.length === 0) continue;\n\n    result.push({\n      json: {\n        content: cleanContent,\n        fileName: fileName,\n        lineIndex: page.index\n      }\n    });\n  }\n}\n\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        304
+      ],
+      "id": "3b21520a-1272-43ea-8823-ed25a298d330",
+      "name": "split"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=## 역할 (Role)\n당신은 사내 지식 베이스(Neo4j)와 연동된 전문 어시스턴트 **'스마트 오피스 메이트'**입니다. \n자체 지식으로 답할 수 있는 일반 대화와, 반드시 문서를 찾아야 하는 업무 질문을 냉철하게 구분하십시오.\n\n[현재 사용자의 질문]: {{ $json.body.message }}\n\n## [1. 대화 유형 판단 및 대응 로직]\n1. **일상적 대화**: 인사, 날씨, 가벼운 대화 등 업무 데이터가 필요 없는 경우\n   - **행동**: 도구 없이 당신의 지능으로 친절하고 센스 있게 답변하세요.\n\n2. **사내 정보 관련 질문**: 규정, 프로젝트 일정, 복지, 공문 등 사내 데이터가 필요한 경우\n   - **행동**: 반드시 `search_company_knowledge` 도구를 호출하세요.\n   - **중요**: 질문이 구체적인 '팩트'를 요구한다면 무조건 도구를 사용해야 합니다.\n\n## [2. 도구(Tool) 호출 파라미터 전략 - 엄격 준수]\n도구 호출 파라미터 생성 시 아래 규칙을 반드시 지켜주세요.\n\n- **query_text (필수)**: \n  - **[대화 맥락 파악 및 검색어 재구성 (Query Rewriting)]**: 사용자의 현재 질문에 대명사(예: \"그거\", \"저번에 말한\", \"이 문서\", \"여기서\")가 있거나, 이전 답변에 이어지는 꼬리 질문인 경우, 반드시 **이전 대화 기록(주제, 핵심 키워드)을 포함하여 완벽한 하나의 독립적인 검색 문장으로 재구성**해서 전달하세요.\n    *(예시: 이전 답변이 AI 바우처 일정이었고, 현재 질문이 \"그럼 거기서 양식은 어딨어?\" 라면 ➔ \"AI 바우처 신청 양식\"으로 재구성)*\n  - 단, 명시된 고유 명사나 핵심 단어 원형은 보존하며, 억지로 유의어로 바꾸거나 넘겨짚지 마세요.\n  - 첫 질문이거나 독립적인 질문일 경우 사용자의 질문을 원형 그대로 전달합니다.\n\n- **file_name (선택)**: \n  - **[중요: 출처 파일명 고정]** 사용자가 방금 당신이 답변한 특정 문서 내용에 대해 이어서 질문(꼬리 질문)하는 경우, 이전 답변 기록 마지막에 남아있는 **[출처 파일명]을 반드시 추출하여 이 파라미터에 입력**하세요. \n  - 이를 통해 다른 파일의 데이터가 섞여서 검색되는 것을 원천 차단해야 합니다. 사용자가 직접 파일명을 언급한 경우에도 이곳에 입력합니다.\n\n- **category (선택)**: \n  - [4. 분류 기준 및 속성(Category) 매핑] 리스트와 내용이 **90% 이상 일치할 때만** 선택하세요.\n  - 꼬리 질문일 경우, 이전 답변에서 활용했던 카테고리를 그대로 유지하여 입력하세요. 조금이라도 애매하면 무조건 빈 문자열(`\"\"`)을 입력하세요.\n\n## [3. 검색 결과 이해 및 답변 구성 규칙]\n도구는 질문에 대해 두 가지 형태의 문맥(Context)을 반환합니다. 이를 종합하여 답변하세요.\n* **`primaryContent`**: 질문과 가장 일치하는 메인 문서의 핵심 내용(위아래 문맥 포함)\n* **`supplementalContent`**: 연관된 다른 문서들의 요약 내용(확장 정보)\n\n- **입체적 답변**: 먼저 `primaryContent`를 바탕으로 질문에 대한 직접적이고 명확한 정답을 제시하세요. 그 후, `supplementalContent`에 사용자가 알아두면 좋을 관련 정보(예: 연관 규정, 추가 일정 등)가 있다면 덧붙여서 풍부하게 답변하세요.\n- **출처 명시**: 검색 성공 시 반드시 마지막에 참조한 출처를 \"[출처: 파일명1, 파일명2]\" 형식으로 나열해 주세요. (연관 문서가 포함될 수 있으므로 파일명을 모두 적어주세요).\n- **사실 근거**: 당신의 사전 지식을 섞지 말고, 오직 검색된 내용(`primaryContent`, `supplementalContent`)에만 기반하여 답변하세요. \n- **검색 실패**: 결과가 없거나 적절한 답이 없다면 \"사내 지식 베이스에서 관련 정보를 찾지 못했습니다. 키워드를 더 구체적으로 적어주시겠어요?\"라고 안내하세요.\n- **답변 정리**: 사용자가 보기 쉽게 줄바꿈, 번호 등 이용해서 이쁘게 정렬해줘.\n\n## [4. 분류 기준 및 속성(Category) 매핑]\n질문 의도에 따라 도구에 전달할 `category` 파라미터 값입니다.\n사용자의 질문 문맥, 파일명, 확장자 등을 종합적으로 판단하여 아래 카테고리 중 하나를 선택하세요. \n판단이 모호할 경우 억지로 끼워 맞추지 말고 빈 문자열(\"\")을 전달하십시오.\n\n1. CEO (창립기념, 신년사, 대표이사 메시지, 타운홀 미팅 자료, 경영 방침, CEO 서신) -> `Ceo_message`\n2. 자료실 (소개서, 양식, 가이드, 홍보, 학습자료, 프린트, 장비사용/관리, 매뉴얼, 업무용 템플릿, 참조용 문서) -> `Resource`\n3. 사내소식 (뉴스, 뉴스레터, 일반 공지, 사내외 주요 이슈, 웹진, 모집, 신년회, 송년회, 보도자료 공유, 명절, 우수사원, 사내소식지, 담담, 입사자, 사내 행사 안내, 조직 문화 캠페인) -> `Company`\n4. 상조 (상조, 상조회, 경조사 지원금 기준, 상조회 가입/탈퇴, 상조용품 신청 안내) -> `Mutual_aid`\n5. 사내규정 (규정, 취업규칙, 복무규정, 보안규정, 윤리강령, 사내 지침 및 내규, 가이드라인) -> `Welfare_Doc`\n6. 영수증 (영수증, 카드, 결제, 매출전표, 법인카드, 식대, 교통비, 정산, Invoice, 지출 증빙, 청구서, 거래명세서) -> `Receipt`\n7. 전사지원업무 (인사/총무/회계/예산/경비 FAQ, 아마란스, Brilliant, 비품 신청, 명함 제작, 시설 예약, 회의실 대여, 차량 관리, 사원증 발급, OA기기 신청 및 수리) -> `Admin_Support`\n8. 인사발령 (승진, 전보, 파견, 복직, 휴직, 퇴직, 발령장, 인사 이동 내역, 조직 개편) -> `HR_Order`\n9. 사우소식 (임직원 결혼/부고/출산 알림, 동호회 소식, 임직원 인터뷰, 부서 회식, 사내 게시판 일상 공유) -> `Employee_News`\n10. 제휴 및 홍보 (MOU, 업무협약, 제휴처 안내, 외부 홍보물, 브로셔, 대외 보도자료, 파트너십, 광고 소재) -> `Partnership_PR`\n11. 솔루션 (자사 솔루션, 제품 업데이트, 패치 노트, 시스템 장애 안내, 신규 기능 소개, 제품 릴리즈 노트) -> `Solution`\n12. 인재추천 (사내 추천 제도, 채용 공고 공유, 추천인 포상 안내, 인재풀 등록, 지인 추천 프로그램) -> `Talent_Recommendation`\n13. 연말정산 (연말정산 안내, 소득공제, 세액공제, 홈택스, 원천징수영수증, 간소화 서비스, 부양가족 등록) -> `Year_End_Tax`\n14. AI (AI 관련 기술, 프로젝트, 가이드, 알고리즘, 시스템 구축 등 AI 관련 모든 내용) -> `Ai`\n15. 기타 (위 1~14번 기준 중 그 어디에도 해당하지 않는 모든 파일 및 질문) -> `Etc`\n\n## [5. 제약 사항]\n- 질문이 모호하면(예: \"그거 얼마야?\") \"어떤 품목의 금액을 말씀하시는 걸까요?\"라고 되물어 맥락을 파악하세요.\n- 보안상 중요한 정보가 포함된 문서일 경우, 문서에 기재된 보안 등급이나 지침을 준수하여 답변하세요.\n\n## [6. 톤앤매너]\n- 일상 대화는 다정하고 유머러스하게, 업무 답변은 명확하고 신뢰감 있게 구성하세요.\n\n질문을 분석하여 최적의 경로(직접 답변 또는 도구 호출)를 선택하십시오.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        48,
+        768
+      ],
+      "id": "417e2142-6d8a-45ee-8594-a45e8564d932",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"answer\": {{ JSON.stringify($json.output) }}\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        400,
+        768
+      ],
+      "id": "139a0298-9a1e-4997-ae9c-4169535a9d25",
+      "name": "조회 응답"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "neo4j/ask",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -272,
+        768
+      ],
+      "id": "e689da56-3e6a-4cfb-a366-d7f7045b277e",
+      "name": "ask",
+      "webhookId": "904ed921-1803-43be-909a-2f56d720a691"
+    },
+    {
+      "parameters": {
+        "content": "### 📚 테이블 기본 설정 및 조회",
+        "height": 556,
+        "width": 1116,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -368,
+        -384
+      ],
+      "typeVersion": 1,
+      "id": "2c63b389-8d5d-4c07-b3f1-771807271b24",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -192
+      ],
+      "id": "569117fd-8088-43ac-8db6-bbfb41e059ba",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"answer\": \"{{ $('split').first().json.fileName }} 파일을 저장했습니다.\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1968,
+        304
+      ],
+      "id": "50045dbc-542d-4743-9ca3-c4eaffb10df8",
+      "name": "파일 저장 응답",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "HCX-005",
+          "mode": "list",
+          "cachedResultName": "HCX-005"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -96,
+        992
+      ],
+      "id": "195d2755-196c-4d5e-a449-97016ff85610",
+      "name": "HCX Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "tbd51keTyNbcjalW",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "HCX-005",
+          "mode": "list",
+          "cachedResultName": "HCX-005"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        32,
+        528
+      ],
+      "id": "893de1cc-7f37-43e2-89ea-096f05542fb2",
+      "name": "HCX Chat Model File",
+      "credentials": {
+        "openAiApi": {
+          "id": "tbd51keTyNbcjalW",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=AIzaSyCfR-frghztT-IOI9XUMQtJeIyaYEND2_M",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"models/gemini-embedding-001\",\n  \"content\": {\n    \"parts\": [{\n      \"text\": {{ JSON.stringify($json.content) }}\n    }]\n  },\n  \"taskType\": \"RETRIEVAL_DOCUMENT\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1248,
+        304
+      ],
+      "id": "51df187f-7e5a-4553-89c8-1cc1ccb5e736",
+      "name": "embedding1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const splitData = $('split').all();\nconst categoryRaw = $('문서 카테고리 분류').item.json.output;\nconst categoryName = JSON.parse(categoryRaw.replace(/```json|```/g, '')).tableName;\n\n// 현재 날짜 (YYYY-MM-DD) 생성\nconst today = new Date().toISOString().split('T')[0];\n\n// Cypher 쿼리 문법 에러를 막기 위한 이스케이프 함수 (따옴표, 줄바꿈 등 처리)\nconst escapeCypher = (str) => {\n  return (str || '')\n    .replace(/\\\\/g, '\\\\\\\\')\n    .replace(/'/g, \"\\\\'\")\n    .replace(/\\n/g, '\\\\n')\n    .replace(/\\r/g, '\\\\r');\n};\n\nconst cypherDataList = $input.all().map((item, index) => {\n  const original = splitData[index].json;\n  \n  const safeFileName = escapeCypher(original.fileName);\n  const safeContent = escapeCypher(original.content);\n  const safeCategory = escapeCypher(categoryName);\n  const lineIndex = original.lineIndex || 0;\n  \n  const embeddingStr = item.json.embedding.values.join(',');\n\n  // Neo4j가 인식할 수 있는 Map(객체) 형태로 텍스트 조립\n  return `{ fileName: '${safeFileName}', category: '${safeCategory}', date: '${today}', content: '${safeContent}', lineIndex: ${lineIndex}, embedding: [${embeddingStr}] }`;\n});\n\n// 전체 UNWIND 쿼리 문자열 조립 (데이터가 쿼리 안에 아예 하드코딩 되어 들어갑니다)\nconst finalQuery = `\n// 1. 관계 노드 생성/확인 (이미 있으면 가져옴)\nMERGE (cat:Category {name: '${escapeCypher(categoryName)}'})\nMERGE (dNode:Date {date: '${today}'})\n\nWITH cat, dNode\nUNWIND [ ${cypherDataList.join(',\\n  ')} ] AS item\n\n// 2. 상위 노드 생성\nMERGE (d:Document {fileName: item.fileName})\nON CREATE SET d.createdAt = datetime()\nSET d.category = item.category, d.updatedAt = datetime()\n\n// 3. 상위 노드에 관계 노드 연결(카테고리, 날짜)\nMERGE (d)-[:IN_CATEGORY]->(cat)  \nMERGE (d)-[:CREATED_ON]->(dNode)\n\n// 4. 하위 청크 노드 생성 및 연결\nCREATE (c:Chunk {\n    content: item.content,\n    lineIndex: item.lineIndex,\n    embedding: item.embedding\n})\nMERGE (d)-[:HAS_CHUNK]->(c)\n\nRETURN count(c) as totalInserted\n`;\n\n// 다음 노드로 완성된 'query' 텍스트 하나만 넘깁니다.\nreturn [{\n  json: {\n    query: finalQuery\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        304
+      ],
+      "id": "7fa22ac0-bcb7-43cd-b277-839c9e5575ca",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "resource": "graphDb",
+        "cypherQuery": "={{ $json.query }}"
+      },
+      "type": "n8n-nodes-neo4j.neo4j",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        304
+      ],
+      "id": "2991f9ef-c6e5-4751-96e1-bc6eb2a992ef",
+      "name": "ExecuteQuery graphDb1",
+      "alwaysOutputData": false,
+      "credentials": {
+        "neo4jApi": {
+          "id": "lgWkFHi6PaekitwX",
+          "name": "Neo4j account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        192,
+        512
+      ],
+      "id": "a90f1047-838f-4813-9262-3edf2543cf83",
+      "name": "Gemini Model 1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0SeTM1EBQme34hcs",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        16,
+        992
+      ],
+      "id": "73d99ecd-36b3-4e4f-8298-ed02d4ecd11b",
+      "name": "Gemini Model 3",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0SeTM1EBQme34hcs",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "graphDb",
+        "cypherQuery": "=MATCH (d:Document)\nRETURN d.fileName AS fileName, d.category AS category, d.updatedAt AS updatedAt\nORDER BY d.updatedAt DESC"
+      },
+      "type": "n8n-nodes-neo4j.neo4j",
+      "typeVersion": 1,
+      "position": [
+        32,
+        -272
+      ],
+      "id": "e0493a03-8a1c-46c0-93a8-180887745e38",
+      "name": "serach node",
+      "alwaysOutputData": false,
+      "credentials": {
+        "neo4jApi": {
+          "id": "lgWkFHi6PaekitwX",
+          "name": "Neo4j account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "특정 상위 노드 & 연결된 하위 노드(Chunk) 전체 삭제 쿼리",
+        "height": 224,
+        "width": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -64,
+        -112
+      ],
+      "typeVersion": 1,
+      "id": "1b729e58-92e2-4638-a12a-1fc38e9a5d37",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "resource": "graphDb",
+        "cypherQuery": "=MATCH (d:Document {fileName: '문서 기반 AI 질의응답 시스템 개발_요구사항 분석.pptx'})\nOPTIONAL MATCH (d)-[:HAS_CHUNK]->(c:Chunk)\nDETACH DELETE d, c"
+      },
+      "type": "n8n-nodes-neo4j.neo4j",
+      "typeVersion": 1,
+      "position": [
+        32,
+        -48
+      ],
+      "id": "6d62ccb7-d5f0-49b5-aee5-c2678bbec9da",
+      "name": "serach node1",
+      "alwaysOutputData": false,
+      "credentials": {
+        "neo4jApi": {
+          "id": "lgWkFHi6PaekitwX",
+          "name": "Neo4j account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "상위 노드에 연결된 하위 노드(Chunk) 수 조회 쿼리",
+        "height": 224,
+        "width": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        320,
+        -336
+      ],
+      "typeVersion": 1,
+      "id": "5e6d2c4f-4c36-42f1-b771-dd7827a03ca8",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "resource": "graphDb",
+        "cypherQuery": "=MATCH (d:Document {fileName: '문서 기반 AI 질의응답 시스템 개발_요구사항 분석.pptx'})-[:HAS_CHUNK]->(c:Chunk)\nRETURN d.fileName AS fileName, count(c) AS chunkCount"
+      },
+      "type": "n8n-nodes-neo4j.neo4j",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -272
+      ],
+      "id": "09f4e0d4-09df-49b8-a45b-fac2bb8e35ac",
+      "name": "serach node2",
+      "alwaysOutputData": false,
+      "credentials": {
+        "neo4jApi": {
+          "id": "lgWkFHi6PaekitwX",
+          "name": "Neo4j account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Neo4j에 벡터 인덱스(Vector Index) 생성하기",
+        "height": 224,
+        "width": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        320,
+        -112
+      ],
+      "typeVersion": 1,
+      "id": "d3c82924-b5f6-4707-97d2-885518f3d2bd",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "resource": "graphDb",
+        "cypherQuery": "=CREATE VECTOR INDEX chunk_vector_index IF NOT EXISTS\nFOR (c:Chunk)\nON (c.embedding)\nOPTIONS {\n  indexConfig: {\n    `vector.dimensions`: 3072,       // Gemini-embedding-001의 차원 수\n    `vector.similarity_function`: 'cosine' // 코사인 유사도 사용\n  }\n}"
+      },
+      "type": "n8n-nodes-neo4j.neo4j",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -48
+      ],
+      "id": "1c0e3d6b-30c2-4f71-ab97-56808aebfee5",
+      "name": "serach node3",
+      "alwaysOutputData": false,
+      "credentials": {
+        "neo4jApi": {
+          "id": "lgWkFHi6PaekitwX",
+          "name": "Neo4j account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://192.168.0.210:38000/neo4j/mcp/sse",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        304,
+        992
+      ],
+      "id": "8bfa4356-546d-4ba8-a7cb-b845bccd79d4",
+      "name": "MCP Client"
+    },
+    {
+      "parameters": {
+        "content": "특정 단어가 포함된 청크들끼리 관계 맺기",
+        "height": 224,
+        "width": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        864,
+        -320
+      ],
+      "typeVersion": 1,
+      "id": "f5f07948-9687-4430-83ee-9191cb3776b0",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "resource": "graphDb",
+        "cypherQuery": "=// 1. 공통 키워드 노드 생성 및 연결\nMATCH (c:Chunk)\nWHERE c.content CONTAINS 'AI' OR c.content CONTAINS '요구사항' \n// 위 키워드는 예시입니다. 실제 문서에 자주 나오는 단어로 바꿔보세요.\nMERGE (k:Keyword {name: 'AI_Project'})\nMERGE (c)-[:MENTIONS]->(k)"
+      },
+      "type": "n8n-nodes-neo4j.neo4j",
+      "typeVersion": 1,
+      "position": [
+        960,
+        -256
+      ],
+      "id": "c760c580-dde0-4fb8-81df-9aee0d587b03",
+      "name": "serach node4",
+      "alwaysOutputData": false,
+      "credentials": {
+        "neo4jApi": {
+          "id": "lgWkFHi6PaekitwX",
+          "name": "Neo4j account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "카테고리 노드로 상위 노드 관계 맺기",
+        "height": 224,
+        "width": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1248,
+        -320
+      ],
+      "typeVersion": 1,
+      "id": "0e57afa9-4189-43a6-863c-92a519bcd0ae",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "resource": "graphDb",
+        "cypherQuery": "=MATCH (d:Document)\nWHERE d.category IS NOT NULL\nMERGE (cat:Category {name: d.category})\nMERGE (d)-[:IN_CATEGORY]->(cat)"
+      },
+      "type": "n8n-nodes-neo4j.neo4j",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        -256
+      ],
+      "id": "a8a6ffb4-f82b-4f27-9957-28e7ab6fc9f8",
+      "name": "serach node5",
+      "alwaysOutputData": false,
+      "credentials": {
+        "neo4jApi": {
+          "id": "lgWkFHi6PaekitwX",
+          "name": "Neo4j account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "연결 결과 시각적으로 확인하기",
+        "height": 224,
+        "width": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1248,
+        -96
+      ],
+      "typeVersion": 1,
+      "id": "f6c0a131-f601-484d-84dc-5cb4408101fa",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "resource": "graphDb",
+        "cypherQuery": "=MATCH (d:Document)-[:HAS_CHUNK]->(c:Chunk)-[:MENTIONS]->(k:Keyword {name: 'AI_Project'})\nRETURN d, c, k"
+      },
+      "type": "n8n-nodes-neo4j.neo4j",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        -32
+      ],
+      "id": "ee8c4730-a6a7-4164-a8a8-8ffbd3cf99a8",
+      "name": "serach node6",
+      "alwaysOutputData": false,
+      "credentials": {
+        "neo4jApi": {
+          "id": "lgWkFHi6PaekitwX",
+          "name": "Neo4j account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "문서(Document)끼리 유사도 관계 맺기",
+        "height": 224,
+        "width": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1632,
+        -320
+      ],
+      "typeVersion": 1,
+      "id": "e97e4ee7-eaa8-44d8-9ce1-5262ced80448",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "resource": "graphDb",
+        "cypherQuery": "=MATCH (d1:Document)-[:HAS_CHUNK]->(c1:Chunk)\nMATCH (d2:Document)-[:HAS_CHUNK]->(c2:Chunk)\nWHERE id(d1) < id(d2) // 중복 계산 방지\nWITH d1, d2, vector.similarity.cosine(c1.embedding, c2.embedding) AS score\nWHERE score > 0.9 // 유사도가 0.9 이상인 경우만\nWITH d1, d2, avg(score) AS avgScore\nWHERE avgScore > 0.85\nMERGE (d1)-[r:RELATED_TO]-(d2)\nSET r.similarity = avgScore\nRETURN d1.fileName, d2.fileName, avgScore"
+      },
+      "type": "n8n-nodes-neo4j.neo4j",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        -256
+      ],
+      "id": "7f2a8a76-afb2-4a7c-b35c-4376b6e8aa8e",
+      "name": "serach node7",
+      "alwaysOutputData": false,
+      "credentials": {
+        "neo4jApi": {
+          "id": "lgWkFHi6PaekitwX",
+          "name": "Neo4j account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### 📚 관계 설정",
+        "height": 556,
+        "width": 1468,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        752,
+        -384
+      ],
+      "typeVersion": 1,
+      "id": "d773037c-fb16-42ce-8225-c37841e30aea",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.body.sessionId }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        144,
+        992
+      ],
+      "id": "61636570-268c-41b4-9a2a-7dbb22d175fb",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "operation": "setMetrics",
+        "metric": "helpfulness",
+        "userQuery": "={{ $('ask').item.json.body.message }}",
+        "actualAnswer": "={{ $json.output }}",
+        "prompt": "당신은 사내 지식 기반 RAG 챗봇(스마트 오피스 메이트)의 답변 품질을 평가하는 엄격하고 객관적인 '품질 평가 감독관(Quality Evaluator)'입니다.\n아래 제공된 [사용자 질문]과 챗봇이 생성한 [챗봇 답변]을 바탕으로, 4가지 핵심 평가 기준을 검토하십시오.\n\n[사용자 질문]: {{ $('ask').item.json.body.message }}\n[챗봇 답변]: {{ $json.output }}\n\n## 📊 평가 기준 (Rubric)\n\n1. **정확성 및 답변 완결성 (Accuracy)**\n   - 챗봇이 사용자의 질문 의도를 정확히 파악하고 필요한 정보를 누락 없이 제공했는가?\n   - 질문에 없는 엉뚱한 내용을 길게 설명하지는 않았는가?\n\n2. **환각 방지 및 사실 기반 (Factuality & Hallucination)**\n   - 챗봇이 임의로 숫자를 지어내거나(예: 날짜, 금액 등), 거짓된 정보를 만들어내지 않았는가?\n   - (정보가 없는 경우) 무리해서 지어내지 않고, \"관련 정보를 찾지 못했습니다\"라고 솔직하게 답변했는가?\n\n3. **가독성 및 포맷팅 (Formatting)**\n   - 마크다운(글머리 기호, 줄바꿈, 굵은 글씨 등)을 적절히 사용하여 사용자가 한눈에 읽기 쉽게 정보를 구조화했는가?\n   - 텍스트가 뭉개지거나, 가독성을 해치는 불필요한 태그가 과도하게 노출되지 않았는가?\n\n4. **출처 표기 준수 (Citation)**\n   - 답변의 맨 마지막에 반드시 `[출처: 파일명]` 형태의 출처 표기가 존재하는가?\n   - 출처가 누락되거나, 형식이 크게 어긋나지 않았는가?\n\n\n## 📝 평가 및 출력 지시사항\n위 4가지 기준을 모두 완벽하게 충족했거나, 정보 전달에 치명적인 문제가 없다면 이 답변을 합격으로 간주하십시오. 만약 치명적인 거짓 정보(환각)가 있거나, 출처를 아예 빼먹었거나, 질문과 완전히 동떨어진 대답을 했다면 불합격으로 처리하십시오.\n\n**[반드시 아래 포맷으로만 답변할 것]**\n- 합격인 경우: `{\"result\": \"PASS\", \"reason\": \"모든 기준을 충족함 (또는 짧은 칭찬)\"}`\n- 불합격인 경우: `{\"result\": \"FAIL\", \"reason\": \"출처 표기 누락 등 구체적인 실패 원인 1줄\"}`",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.evaluation",
+      "typeVersion": 4.8,
+      "position": [
+        592,
+        768
+      ],
+      "id": "50e782f4-7ded-424b-8442-e132d744d71f",
+      "name": "Evaluation"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        736,
+        960
+      ],
+      "id": "095db9ab-6ba2-4526-ad62-b8215a55111e",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0SeTM1EBQme34hcs",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "이미지 변환": {
+      "main": [
+        [
+          {
+            "node": "split",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "문서 변환": {
+      "main": [
+        [
+          {
+            "node": "split",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "업로드 파일 타입 체크": {
+      "main": [
+        [
+          {
+            "node": "이미지 변환",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "문서 변환",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "문서 카테고리 분류": {
+      "main": [
+        [
+          {
+            "node": "업로드 파일 타입 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "문서 카테고리 분류",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split": {
+      "main": [
+        [
+          {
+            "node": "embedding1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "조회 응답",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "조회 응답": {
+      "main": [
+        [
+          {
+            "node": "Evaluation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ask": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        []
+      ]
+    },
+    "HCX Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "embedding1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "ExecuteQuery graphDb1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExecuteQuery graphDb1": {
+      "main": [
+        [
+          {
+            "node": "파일 저장 응답",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Model 1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "문서 카테고리 분류",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Model 3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluation": {
+      "main": [
+        []
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Evaluation",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1189604ecb5373de69a0c7f148657d41d5e19220759bb238c79305715d6edddb"
+  }
+}

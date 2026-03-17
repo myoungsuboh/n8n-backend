@@ -1,0 +1,668 @@
+{
+  "description": "이 템플릿은 사용자의 요청에 따라 영상을 생성하여 메일에 첨부하여 전송합니다.",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -128,
+        -304
+      ],
+      "id": "1733c7cc-6f17-455a-a69f-c42d5a3fb2e0",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.audio_prompt }}"
+            },
+            {
+              "name": "customMode",
+              "value": "false"
+            },
+            {
+              "name": "instrumental",
+              "value": "true"
+            },
+            {
+              "name": "model",
+              "value": "V5"
+            },
+            {
+              "name": "callBackUrl",
+              "value": "https://api.example.com/callback"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "45809796-424e-4243-86e6-ad6f8a61003d",
+      "name": "Create Song (Suno API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -896,
+        -64
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "IvIQ1tiwRC3OcFsN",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "id": "00d1b021-dbdb-4f2b-bece-04e7fac844ed",
+      "name": "Wait for Song Rendering",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        -656,
+        -64
+      ],
+      "webhookId": "47b6b21f-7d2c-42fd-aa19-c20ad7dc1765",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "url": "https://api.kie.ai/api/v1/generate/record-info ",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "taskId",
+              "value": "={{ $json.data.taskId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "71b37dd1-980b-4c52-99c2-d447008529ba",
+      "name": "Get Generated Song",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -464,
+        -64
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "IvIQ1tiwRC3OcFsN",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "b4ea379e-3541-4d2b-9421-f0c962c8d5e8",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.data.status }}",
+              "rightValue": "SUCCESS"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f8400f9f-5872-4ce7-a51e-8e9d8f61ede3",
+      "name": "Check Song Status",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -288,
+        -64
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        496,
+        -304
+      ],
+      "id": "46be6566-45bc-4e2b-ba7a-349055164692",
+      "name": "Wait",
+      "webhookId": "f06534ea-bb63-4076-87c8-0f15777bf547"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.shotstack.io/v1/render",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"timeline\": {\n    \"tracks\": [\n      {\n        \"clips\": [\n          {\n            \"asset\": {\n              \"type\": \"video\",\n              \"src\": \"{{ $json.video_link }}\"\n            },\n            \"start\": 0,\n            \"length\": {{ $json.duration }},\n            \"fit\": \"cover\"\n          }\n        ]\n      },\n      {\n        \"clips\": [\n          {\n            \"asset\": {\n              \"type\": \"audio\",\n              \"src\": \"{{ $json.audio_link }}\"\n            },\n            \"start\": 0,\n            \"length\": {{ $json.duration }}\n          }\n        ]\n      }\n    ]\n  },\n  \"output\": {\n    \"format\": \"mp4\",\n    \"resolution\": \"1080\",\n    \"aspectRatio\": \"9:16\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        304,
+        -304
+      ],
+      "id": "59378dc0-3e38-4492-a244-f7c210a65cec",
+      "name": "shotstack 병합 요청",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QhyLmflJ732tveY5",
+          "name": "Shotstack"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.shotstack.io/v1/render/{{$json.response.id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        688,
+        -304
+      ],
+      "id": "bd89bfeb-5358-4662-b6bd-943b26a43ba8",
+      "name": "병합 영상 가져오기",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QhyLmflJ732tveY5",
+          "name": "Shotstack"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "너는 최고 수준의 '수면/힐링 앰비언트(Ambient) 뮤직비디오' 전문 AI 디렉터야.\n사용자가 원하는 분위기나 주제를 입력하면, Pexels에서 영상을 찾을 검색어와 Suno에서 음악을 생성할 프롬프트를 완벽하게 분리하여 기획해야 해. \n반드시 아래의 [작성 규칙]을 엄격하게 지키고, 결과는 지정된 [JSON 포맷]으로만 출력해. 다른 설명이나 인사말은 절대 붙이지 마.\n\n[영상 키워드 (video_query) 작성 규칙]\n1. Pexels API 검색용이므로 반드시 **영어(English)**로 작성할 것 (3~6단어 조합).\n2. 단순한 명사가 아닌 **[피사체 + 시간대/빛 + 분위기/카메라 워크]**를 조합하여 구체적으로 작성할 것.\n   - 피사체: nature, landscape, ocean, dense forest, calm lake, night sky 등\n   - 시간대/빛: golden hour, misty, twilight, soft morning light, moonlight 등\n   - 카메라/분위기: cinematic, slow motion, static, peaceful, macro 등\n3. 사람, 복잡한 도시, 빠른 움직임이 연상되는 단어는 절대 포함하지 말 것.\n4. 예시: \"cinematic misty pine forest morning\", \"slow motion golden hour ocean waves\", \"peaceful starry night sky timelapse\"\n\n[오디오 프롬프트 (audio_prompt) 작성 규칙]\n1. Suno API 생성용이므로 반드시 **영어(English)**로 작성할 것.\n2. 보컬(사람 목소리)은 절대 금지. 반드시 **피아노 중심의 연주곡(Piano solo, Instrumental)**으로 한정할 것.\n3. 수면과 힐링에 맞도록 **템포와 질감(Texture)**을 구체적으로 묘사할 것.\n   - 질감/공간감: soft felt piano, deep reverb, warm acoustic, ethereal, ambient pad\n   - 템포/분위기: very slow tempo, rubato, sleep-inducing, deeply relaxing, lullaby\n4. 사용자의 주제에 맞는 '자연의 소리(ASMR)'를 배경음으로 은은하게 깔아줄 것. (예: soft background rain sounds, gentle distant ocean waves).\n5. 특정 곡명이나 아티스트 이름은 저작권 문제가 있으므로 절대 사용 금지.\n6. 예시: \"A deeply relaxing sleep-inducing soft felt piano solo, very slow tempo, deep reverb, accompanied by gentle background rain sounds, ethereal, healing ambient instrumental\"\n\n[출력 규칙 엄수 - 매우 중요]\n결과를 출력할 때 절대 마크다운 코드 블록(```json ... ```)으로 감싸지 마. 다른 텍스트 없이 오직 순수한 JSON 중괄호 `{}` 형태로만 대답해.\n\n[JSON 출력 포맷]\n{\n  \"video_query\": \"여기에 Pexels 검색용 영어 키워드\",\n  \"audio_prompt\": \"여기에 Suno 생성용 영어 프롬프트\"\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -1440,
+        -208
+      ],
+      "id": "e5886322-c83b-4ce8-956c-69685120ed8c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1440,
+        -16
+      ],
+      "id": "a928de78-5396-49a5-8eb4-891fa46173cf",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0SeTM1EBQme34hcs",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.pexels.com/videos/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.video_query }}"
+            },
+            {
+              "name": "orientation",
+              "value": "portrait"
+            },
+            {
+              "name": "per_page",
+              "value": "1"
+            },
+            {
+              "name": "size",
+              "value": "large"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "ceQ08ttyU7No90UiV38cPrtpFEkezvFZhofPgbZgTCA0OATOdoPixTPR"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -896,
+        -320
+      ],
+      "id": "2681763a-db7f-43b4-ba8e-11b0061bb99a",
+      "name": "Search Video"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1696,
+        -208
+      ],
+      "id": "03f12b54-d936-4330-ae3d-def43e385f95",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (let item of $input.all()) {\n  try {\n    // 1. AI가 뱉은 통짜 문자열 가져오기\n    let rawText = item.json.output;\n    \n    // 2. 마크다운 기호(```json, ```) 싹 다 지우고 양옆 공백 제거\n    let cleanText = rawText.replace(/```json/gi, '').replace(/```/gi, '').trim();\n    \n    // 3. 깨끗해진 텍스트를 진짜 JSON 객체로 변환\n    let parsedData = JSON.parse(cleanText);\n    \n    // 4. 변환된 값을 item.json에 쓰기 좋게 세팅\n    item.json.video_query = parsedData.video_query;\n    item.json.audio_prompt = parsedData.audio_prompt;\n    \n  } catch (error) {\n    // 혹시라도 AI가 이상한 말을 뱉어서 에러가 나면 확인하기 위함\n    item.json.error = \"파싱 에러: \" + error.message;\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1136,
+        -208
+      ],
+      "id": "65727f34-8092-4d6f-a70e-baadc195a935",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "OINxPCLC5hYEC6rq",
+          "mode": "list",
+          "cachedResultName": "email",
+          "cachedResultUrl": "/projects/rUzZX2dYKswL43yd/datatables/OINxPCLC5hYEC6rq"
+        },
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}"
+      },
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1.1,
+      "position": [
+        1296,
+        -80
+      ],
+      "id": "41e0ee95-a29c-4fa3-9ab6-3ec7789d3b1b",
+      "name": "Get Email"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        -80
+      ],
+      "id": "b9eb0f22-c71a-41ca-89c7-52bd2a021f46",
+      "name": "Send a message in Gmail",
+      "webhookId": "b6de346e-5143-4812-9476-04260cb52b85",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "s5L4VodXvoDDkB2X",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🛠️ 너는 메일 전달 AI 에이전트야.\n너의 주 업무는 영상을 다운로드할 수 있는 링크를 포함하여 메일을 직접 발송하는 업무야.\n\n\n[영상 정보]\nURL: {{ $json.response.url }}\n\n[행동 수칙]\n1. 도구(Tool) 사용 및 데이터 보안\n- 메일을 보낼 때는 반드시 'Send a message in Gmail' 도구를 사용하세요.\n- 'Get Email' 도구로 조회한 이메일 주소는 보안을 철저히 유지하며 발송용으로만 사용해요.\n- **메일 본문이 깨지지 않도록 반드시 HTML 형식을 활성화(append html tags)해서 보내야 해요.**\n\n2. 이메일 제목 작성 규칙\n- 제목은 항상 영어로 번역해서 사용하세요.\n- **1순위:** 사용자가 제목을 구체적으로 지정했다면 그 제목 사용.\n- **2순위:** 지정된 제목이 없다면 영상 내용을 요약한 정중하고 긍정적인 제목 창작.\n\n3. 메일 내용(Message) 및 한글 링크 작성 규칙\n- HTML 형식을 사용해 정중하게 작성하세요.\n- **용량이 큰 영상이므로 첨부 대신 본문에 다운로드 링크를 삽입하세요.**\n- **링크 텍스트는 반드시 한글로 \"[여기를 클릭하여 영상 확인하기]\" 또는 \"[오늘의 영상 선물 다운로드]\"라고 작성하고 강조하세요.**\n- 부드러운 \"해요체\"를 사용하고, 마지막엔 따뜻한 응원의 한마디를 덧붙여줘요.\n- **오늘의 명언**을 한 줄 넣고 <b>굵게(Bold)</b> 처리해 주세요.\n\n4. 메일 전송 로직 (To)\n- \"ms.oh1723@hnix.co.kr\" 수신자(To)로 사용하세요.\n\n5. 최종 보고\n- 메일 발송 도구를 실행하여 성공했다면, 사용자에게 \"성공적으로 메일을 보냈어요!\"라고 다정하게 말하며 작업 내용을 요약해 주세요.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1152,
+        -320
+      ],
+      "id": "04317b6d-aa60-4e83-b0f4-e8da7b22ef8c",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        -80
+      ],
+      "id": "e6b7d065-9b98-4d41-8479-f04220a89593",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0SeTM1EBQme34hcs",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fe55c03d-f111-4332-9dfa-1e52fdcb144d",
+              "leftValue": "={{ $input.all().every(item => item.json.response.status === 'done') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        864,
+        -304
+      ],
+      "id": "f9f6c7a0-8962-4b84-a852-aed0412e3a0a",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Merge 노드에서 합쳐진 비디오 배열과 오디오 배열 가져오기\nconst data = $input.first().json;\nconst videos = data.videos || [];\nconst audios = data.data.response.sunoData || [];\n\nlet result = [];\n\n// 혹시라도 영상이나 오디오가 비어있으면 에러 방지용으로 빈 배열 리턴\nif (videos.length === 0 || audios.length === 0) {\n  return result;\n}\n\n// 2. 단일(고정) 비디오 정보 미리 추출 (첫 번째 영상만 무조건 사용)\nconst singleVideo = videos[0];\nconst bestVideoLink = singleVideo.video_files.sort((a, b) => b.width - a.width)[0].link;\nconst videoDuration = singleVideo.duration;\n\n// 3. 오디오 개수만큼 루프 돌면서 아이템 찢기 (1:N 매칭)\nfor (let i = 0; i < audios.length; i++) {\n  result.push({\n    json: {\n      video_link: bestVideoLink, // 고정된 영상 링크\n      duration: videoDuration,   // 고정된 영상 길이\n      audio_link: audios[i].audioUrl // 오디오만 1, 2, 3번 순차적으로 변경\n    }\n  });\n}\n\n// 4. 쪼개진 아이템들을 리턴\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        112,
+        -304
+      ],
+      "id": "7f8f9186-e055-408b-bbfe-2dbf2b95d8d1",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "connections": {
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Song (Suno API)": {
+      "main": [
+        [
+          {
+            "node": "Wait for Song Rendering",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Song Rendering": {
+      "main": [
+        [
+          {
+            "node": "Get Generated Song",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Generated Song": {
+      "main": [
+        [
+          {
+            "node": "Check Song Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Song Status": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Wait for Song Rendering",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "병합 영상 가져오기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "shotstack 병합 요청": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "병합 영상 가져오기": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Video": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Search Video",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Song (Suno API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "shotstack 병합 요청",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1189604ecb5373de69a0c7f148657d41d5e19220759bb238c79305715d6edddb"
+  }
+}

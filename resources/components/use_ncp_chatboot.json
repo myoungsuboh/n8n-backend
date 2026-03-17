@@ -1,0 +1,37 @@
+{
+  "description": "이 템플릿은 NCP의 AI 챗 모델을 호출합니다..",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Authorization\": \"Bearer nv-50c28a33eb5445ba995da398d86155e0Py1p\",\n  \"Content-Type\": \"application/json\",\n  \"Accept\": \"application/json\",\n  \"X-NCP-CLOVASTUDIO-REQUEST-ID\": \"466f34ddc4ac49319355349860f60bad\"\n}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"너는 친절하고 명확하게 답변하는 AI 어시스턴트야.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"안녕? 너는 누구니? 간단하게 소개해줘.\"\n    }\n  ],\n  \"topP\": 0.8,\n  \"topK\": 0,\n  \"maxTokens\": 256,\n  \"temperature\": 0.5,\n  \"repetitionPenalty\": 1.1,\n  \"includeAiFilters\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -208,
+        -256
+      ],
+      "id": "3b4c0d6a-0ce6-4e4f-965d-97480ba0ad0b",
+      "name": "AI Chart Call"
+    }
+  ],
+  "connections": {
+    "AI Chart Call": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "1189604ecb5373de69a0c7f148657d41d5e19220759bb238c79305715d6edddb"
+  }
+}

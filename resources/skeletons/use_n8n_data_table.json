@@ -1,0 +1,830 @@
+{
+  "description": "이 템플릿은 N8N의 dataTable 사용하는 RAG 예시입니다.",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "### 📚 데이터 저장",
+        "height": 540,
+        "width": 2060,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -208,
+        1184
+      ],
+      "typeVersion": 1,
+      "id": "89ecd817-4907-4902-81b0-f83664ccd867",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=너는 회사 정보를 안내해주는 친절한 인사팀(HR) AI 어시스턴트야.\n아래 제공된 [검색된 정보]는 JSON 형식으로 되어 있고, 'score'는 질문과의 관련성 점수야.\n점수가 높은 정보를 우선적으로 참고해서 사용자의 [질문]에 답변해줘.\n\n### 답변 가이드라인\n1. **[검색된 정보]가 있고, 질문과 관련이 있는 경우:**\n   - 반드시 [검색된 정보]에 있는 내용만 근거로 답변해. (없는 내용은 지어내지 마)\n   - 답변 끝에 출처({{ $json.content.first().fileName }})를 꼭 언급해줘.\n\n2. **[검색된 정보]가 비어있거나('[]'), 질문과 전혀 관련이 없는 경우:**\n   - **\"규정을 찾을 수 없습니다\"라고 사과하지 마.**\n   - 대신 **일상적인 AI 비서처럼 자연스럽게 대화**를 이어가.\n   - 예: 인사를 하면 반갑게 받아주고, 일반 상식 질문이면 아는 대로 답해줘.\n   - 단, 회사 규정에 대해 묻는데 정보가 없는 경우에만 솔직하게 \"해당 내용은 현재 제가 가진 자료에 없습니다.\"라고 말해줘.\n\n3. **톤앤매너:**\n   - 친절하고, 요약해서 읽기 편하게 답변해줘.\n---\n### [검색된 정보]\n{{ JSON.stringify($json.content) }}\n\n### [질문]\n{{ $('chatMessage').first().json.chatInput }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        1312
+      ],
+      "id": "3a20f5e8-8062-40cd-b9a9-90a6cf09f1ae",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "formTitle": "Upload your data to test RAG",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "data",
+              "fieldType": "file",
+              "acceptFileTypes": ".pdf, .csv",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        832
+      ],
+      "id": "04ff1928-ac72-4585-8012-d2640f2b5428",
+      "name": "Upload your file here",
+      "webhookId": "983f5bc6-2599-4218-8fef-cbc5217f9461",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1152,
+        1520
+      ],
+      "id": "373fedb3-9138-4a68-9518-22c25837a783",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "documentType": "image_url",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mistralAi",
+      "typeVersion": 1,
+      "position": [
+        672,
+        736
+      ],
+      "id": "cb94a78a-10c8-43c7-9123-63727f5c9998",
+      "name": "이미지 변환",
+      "alwaysOutputData": false,
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "uNLcaqbvvMNF3cQl",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mistralAi",
+      "typeVersion": 1,
+      "position": [
+        672,
+        928
+      ],
+      "id": "4b9ed569-d89a-4432-85af-db91a36dae22",
+      "name": "문서 변환",
+      "alwaysOutputData": false,
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "uNLcaqbvvMNF3cQl",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### 📚 사용자 검색",
+        "height": 508,
+        "width": 2060,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -208,
+        672
+      ],
+      "typeVersion": 1,
+      "id": "c2a82958-f33f-4b33-9f5b-f1d00c4ffb95",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "value": "hay0AtNjwxmHjFVJ",
+          "mode": "list",
+          "cachedResultName": "embeddings",
+          "cachedResultUrl": "/projects/rUzZX2dYKswL43yd/datatables/hay0AtNjwxmHjFVJ"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "fileName",
+              "keyValue": "={{ $json.data[0].filename }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        832
+      ],
+      "id": "c0b47017-def9-44d1-9a96-c2f98e8e0274",
+      "name": "중복 업로드 체크"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f32460f7-ce63-4f29-8dfe-fab78790219e",
+              "leftValue": "={{ $json.data[0].mimetype }}",
+              "rightValue": "image",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "8e2d9802-61f0-4183-93db-b55a8efee742",
+              "leftValue": "={{ $json.data[0].mimetype }}",
+              "rightValue": "jpg",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        832
+      ],
+      "id": "24162689-7bc4-4561-af6b-3af4393412a0",
+      "name": "업로드 파일 타입 체크"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=AIzaSyAS26HQAYv7DL_kEbgzZAnKwMy_IsKXCRI",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"models/gemini-embedding-001\",\n  \"content\": {\n    \"parts\": [{\n      \"text\": {{ JSON.stringify($json.content) }}\n    }]\n  },\n  \"taskType\": \"RETRIEVAL_DOCUMENT\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1120,
+        832
+      ],
+      "id": "b796f64d-cb66-4e53-beba-77ff70db7e03",
+      "name": "embedding"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pages = $input.first().json.pages || [];\n\nconst fileName = $('Upload your file here').first().json.data[0].filename || 'unknown';\n\nconst result = [];\n\nconst CHUNK_SIZE = 5; // 한 번에 5줄씩 묶음 (맥락 파악용)\nconst OVERLAP = 1;    // 다음 묶음이랑 1줄은 겹치게 함 (문맥 끊김 방지)\n\npages.forEach(page => {\n  const markdown = page.markdown;\n  \n  if (markdown && markdown.length > 0) {\n    // 1. 일단 줄바꿈으로 나누고, 빈 줄(공백)은 미리 제거합니다.\n    // 빈 줄 때문에 쓸데없이 청크가 낭비되는 것을 막습니다.\n    const lines = markdown.split('\\n').filter(line => line.trim().length > 0);\n\n    // 2. 슬라이딩 윈도우 로직 적용\n    // i를 (CHUNK_SIZE - OVERLAP) 만큼씩 점프하면서 반복\n    for (let i = 0; i < lines.length; i += (CHUNK_SIZE - OVERLAP)) {\n        \n        // i번째부터 5줄을 가져옴\n        const chunkLines = lines.slice(i, i + CHUNK_SIZE);\n        \n        // 내용이 없으면 중단\n        if (chunkLines.length === 0) break;\n\n        // 5줄을 다시 하나의 문자열로 합침 (\\n으로 연결)\n        const chunkContent = chunkLines.join('\\n');\n\n        // 데이터 저장 할 때 embedding 처리해서 String으로 넣어뒀음.\n        // 표 기호 제거 및 줄바꿈을 공백으로 하여 한 문장처럼 만듦\n        const cleanContent = chunkContent\n            .replace(/\\|/g, ' ')  // 표 기호 제거\n            .replace(/\\n/g, ' ')  // 줄바꿈을 공백으로 (한 문장처럼 만듦)\n            .replace(/\\s+/g, ' ') // 연속된 공백을 하나로 축소\n            .trim();\n\n        if(cleanContent.length < 1) continue\n      \n        result.push({\n            json: {\n                content: cleanContent,\n                fileName: fileName,\n                // 디버깅용으로 몇 번째 줄인지 표시 (나중에 빼도 됨)\n                lineIndex: i \n            }\n        });\n    }\n  }\n});\n\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        832
+      ],
+      "id": "d8a32fe8-2525-4e55-a5be-b533887d531b",
+      "name": "split"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=AIzaSyAS26HQAYv7DL_kEbgzZAnKwMy_IsKXCRI",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"models/gemini-embedding-001\",\n  \"content\": {\n    \"parts\": [{\n      \"text\": {{ JSON.stringify($('chatMessage').first().json.chatInput) }}\n    }]\n  },\n  \"taskType\": \"RETRIEVAL_QUERY\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        1312
+      ],
+      "id": "aa2351e3-1253-433b-a436-33636a7fee06",
+      "name": "searchEmbedding"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "hay0AtNjwxmHjFVJ",
+          "mode": "list",
+          "cachedResultName": "embeddings",
+          "cachedResultUrl": "/projects/rUzZX2dYKswL43yd/datatables/hay0AtNjwxmHjFVJ"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        512,
+        1248
+      ],
+      "id": "41e607f2-9745-4b25-960e-5cdbce98c0a0",
+      "name": "GetData"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 질문 벡터\nconst queryVector = $('searchEmbedding').first().json.embedding.values\n\n// 전체 데이터\nconst allData = $('GetData').all()\n\n// 질문 텍스트\nconst queryText = $('chatMessage').first().json.chatInput || \"\";\n\n// 유사도 커트라인\nconst THRESHOLD = 0.6;\n\n// 유사도 계산\nconst cosineSimilarity = (vecA, vecB) =>{\n  let dotProduct = 0;\n  let normA = 0;\n  let normB = 0;\n  for (let i = 0; i < vecA.length; i++) {\n    dotProduct += vecA[i] * vecB[i];\n    normA += vecA[i] * vecA[i];\n    normB += vecB[i] * vecB[i];\n  }\n  if (normA === 0 || normB === 0) return 0;\n  \n  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));\n}\n\n// 2자씩 잘라서 배열에 저장\nconst getNgrams = (text) => {\n    const cleanText = text.replace(/[^\\wㄱ-ㅎ가-힣]/g, '');\n    const grams = [];\n    for (let i = 0; i <= cleanText.length - 2; i++) {\n        grams.push(cleanText.substring(i, i + 2));\n    }\n    return [...new Set(grams)]; // 중복 제거\n};\n\nconst queryKeywords = queryText.split(/\\s+/).filter(w => w.length >= 2);\nconst queryGrams = getNgrams(queryText);\n\n// 유사도 점수 매기기\nconst rankedDocs = allData.map(item => {\n  let docVector = null\n  \n  try {\n    // 데이터 저장 할 때 embedding 처리해서 String으로 넣어뒀음.\n      docVector = typeof item.json.embedding === 'string' ? JSON.parse(item.json.embedding) : null;\n    \n  } catch (e) {\n      docVector = []; // 에러 방지용 빈 배열\n  }\n\n  const content = item.json.content || \"\";\n  const fileName = item.json.fileName || \"unknown\";\n  \n  if (!docVector || docVector.length === 0) {\n      return { content, fileName, score: 0 };\n  }\n\n  // 기본 유사도 점수\n  let score = cosineSimilarity(queryVector, docVector); \n\n  // 질문 키워드가 내용에 있으면 가산점 부여\n  queryKeywords.forEach(word => {\n        if (content.includes(word)) score += 0.1;\n  });\n\n  let gramMatchCount = 0;\n\n  // 질문 키워드에 단어가 내용에 있으면 가산점 부여\n  queryGrams.forEach(gram => {\n      if (content.includes(gram)) gramMatchCount++;\n  });\n\n  // 겹치는 2글자당 0.02점 가산\n  score += (gramMatchCount * 0.02);\n  \n  return { content, fileName, score };\n});\n\n// 유사도 순 정렬 (가중치 적용 후 점수 기준)\nrankedDocs.sort((a, b) => b.score - a.score);\n\n// 커트라인 밑으로는 버림\nconst validResults = rankedDocs.filter(doc => doc.score > THRESHOLD);\n\nconst getCount = validResults.length > 10 ? 10 : validResults.length\n\n// llm에서 최적 답변을 위해 최대 10개 리턴\nconst topResults = validResults.slice(0, getCount); \n\n// agent는 리턴 개수만큼 답변을 함으로 content에 담아 1개의 item을 리턴해야함.\nreturn [{\n    json: {\n        content: topResults \n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        1248
+      ],
+      "id": "587b19a9-65a3-4330-bd71-737ec39c9a3a",
+      "name": "matchData"
+    },
+    {
+      "parameters": {
+        "public": true,
+        "availableInChat": true,
+        "options": {
+          "allowFileUploads": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -160,
+        1312
+      ],
+      "id": "99a017a9-a631-4332-8bfe-124f4cc4b98a",
+      "name": "chatMessage",
+      "webhookId": "be5b9c5e-daff-43ae-ab16-b917d0e30fe0"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        1040
+      ],
+      "id": "e8d61fe4-ced4-4dac-ba6d-8fc121d83bdd",
+      "name": "Save Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0SeTM1EBQme34hcs",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        160,
+        1504
+      ],
+      "id": "afcb0277-5a4d-4fcb-901a-bc51b60dce77",
+      "name": "Search Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0SeTM1EBQme34hcs",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        1520
+      ],
+      "id": "26750adc-14f9-4702-a365-61c24e7cb1bc",
+      "name": "Ans Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0SeTM1EBQme34hcs",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $('Upload your file here').item.json.data[0].filename }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "복지",
+              "description": "복리후생규정"
+            },
+            {
+              "category": "기타",
+              "description": "복리후생규정 외 문의"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        1280,
+        832
+      ],
+      "id": "d15114f2-c385-4cdc-a4c2-4a9db202e220",
+      "name": "데이터 상위 분류"
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $('chatMessage').item.json.chatInput }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "복지",
+              "description": "복리후생규정"
+            },
+            {
+              "category": "기타",
+              "description": "복리후생규정 외 문의"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        1312
+      ],
+      "id": "e75d9818-bc98-435d-adde-c9cb2d3c4932",
+      "name": "질문 상위 분류"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "hay0AtNjwxmHjFVJ",
+          "mode": "list",
+          "cachedResultName": "embeddings",
+          "cachedResultUrl": "/projects/rUzZX2dYKswL43yd/datatables/hay0AtNjwxmHjFVJ"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "embedding": "={{ JSON.stringify($json.embedding.values) }}",
+            "fileName": "={{ $('split').item.json.fileName }}",
+            "content": "={{ $('split').item.json.content }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "embedding",
+              "displayName": "embedding",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "fileName",
+              "displayName": "fileName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "content",
+              "displayName": "content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1616,
+        736
+      ],
+      "id": "9d71442f-7879-48a1-a237-f9560afc97b2",
+      "name": "복지 Talbe Insert"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "ocbTNIYOCVbXWRCU",
+          "mode": "list",
+          "cachedResultName": "others",
+          "cachedResultUrl": "/projects/rUzZX2dYKswL43yd/datatables/ocbTNIYOCVbXWRCU"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "embedding": "={{ JSON.stringify($json.embedding.values) }}",
+            "fileName": "={{ $('split').item.json.fileName }}",
+            "content": "={{ $('split').item.json.content }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "embedding",
+              "displayName": "embedding",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "fileName",
+              "displayName": "fileName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "content",
+              "displayName": "content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1616,
+        912
+      ],
+      "id": "43aa67cd-06ca-4f8a-8ff7-52b8d4e33582",
+      "name": "기타 Table Insert"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 질문 벡터\nconst queryVector = $('searchEmbedding').first().json.embedding.values\n\n// 전체 데이터\nconst allData = $('GetOrderData').all()\n\n// 질문 텍스트\nconst queryText = $('chatMessage').first().json.chatInput || \"\";\n\n// 유사도 커트라인\nconst THRESHOLD = 0.6;\n\n// 유사도 계산\nconst cosineSimilarity = (vecA, vecB) =>{\n  let dotProduct = 0;\n  let normA = 0;\n  let normB = 0;\n  for (let i = 0; i < vecA.length; i++) {\n    dotProduct += vecA[i] * vecB[i];\n    normA += vecA[i] * vecA[i];\n    normB += vecB[i] * vecB[i];\n  }\n  if (normA === 0 || normB === 0) return 0;\n  \n  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));\n}\n\n// 2자씩 잘라서 배열에 저장\nconst getNgrams = (text) => {\n    const cleanText = text.replace(/[^\\wㄱ-ㅎ가-힣]/g, '');\n    const grams = [];\n    for (let i = 0; i <= cleanText.length - 2; i++) {\n        grams.push(cleanText.substring(i, i + 2));\n    }\n    return [...new Set(grams)]; // 중복 제거\n};\n\nconst queryKeywords = queryText.split(/\\s+/).filter(w => w.length >= 2);\nconst queryGrams = getNgrams(queryText);\n\n// 유사도 점수 매기기\nconst rankedDocs = allData.map(item => {\n  let docVector = null\n  \n  try {\n    // 데이터 저장 할 때 embedding 처리해서 String으로 넣어뒀음.\n      docVector = typeof item.json.embedding === 'string' ? JSON.parse(item.json.embedding) : null;\n    \n  } catch (e) {\n      docVector = []; // 에러 방지용 빈 배열\n  }\n\n  const content = item.json.content || \"\";\n  const fileName = item.json.fileName || \"unknown\";\n  \n  if (!docVector || docVector.length === 0) {\n      return { content, fileName, score: 0 };\n  }\n\n  // 기본 유사도 점수\n  let score = cosineSimilarity(queryVector, docVector); \n\n  // 질문 키워드가 내용에 있으면 가산점 부여\n  queryKeywords.forEach(word => {\n        if (content.includes(word)) score += 0.1;\n  });\n\n  let gramMatchCount = 0;\n\n  // 질문 키워드에 단어가 내용에 있으면 가산점 부여\n  queryGrams.forEach(gram => {\n      if (content.includes(gram)) gramMatchCount++;\n  });\n\n  // 겹치는 2글자당 0.02점 가산\n  score += (gramMatchCount * 0.02);\n  \n  return { content, fileName, score };\n});\n\n// 유사도 순 정렬 (가중치 적용 후 점수 기준)\nrankedDocs.sort((a, b) => b.score - a.score);\n\n// 커트라인 밑으로는 버림\nconst validResults = rankedDocs.filter(doc => doc.score > THRESHOLD);\n\nconst getCount = validResults.length > 10 ? 10 : validResults.length\n\n// llm에서 최적 답변을 위해 최대 10개 리턴\nconst topResults = validResults.slice(0, getCount); \n\n// agent는 리턴 개수만큼 답변을 함으로 content에 담아 1개의 item을 리턴해야함.\nreturn [{\n    json: {\n        content: topResults \n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        1408
+      ],
+      "id": "11dbf25e-0a9a-4f60-a553-c014eb333f77",
+      "name": "matchData1"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "ocbTNIYOCVbXWRCU",
+          "mode": "list",
+          "cachedResultName": "others",
+          "cachedResultUrl": "/projects/rUzZX2dYKswL43yd/datatables/ocbTNIYOCVbXWRCU"
+        },
+        "matchType": "allConditions",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        512,
+        1408
+      ],
+      "id": "0d66c260-0627-4254-804b-f8fb4f5dbe47",
+      "name": "GetOrderData"
+    },
+    {
+      "parameters": {
+        "content": "외부 엑티브 노드를 사용하지 않고\nn8n 자체 DT 사용 및 RAG 구축하여 데이터 필터링",
+        "height": 80,
+        "width": 352
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -208,
+        576
+      ],
+      "typeVersion": 1,
+      "id": "0020ad21-c27e-4a89-98f7-bd91e8fec0ff",
+      "name": "Sticky Note2"
+    }
+  ],
+  "connections": {
+    "AI Agent": {
+      "main": [
+        []
+      ]
+    },
+    "Upload your file here": {
+      "main": [
+        [
+          {
+            "node": "중복 업로드 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "이미지 변환": {
+      "main": [
+        [
+          {
+            "node": "split",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "문서 변환": {
+      "main": [
+        [
+          {
+            "node": "split",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "중복 업로드 체크": {
+      "main": [
+        [
+          {
+            "node": "업로드 파일 타입 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "업로드 파일 타입 체크": {
+      "main": [
+        [
+          {
+            "node": "이미지 변환",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "문서 변환",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "embedding": {
+      "main": [
+        [
+          {
+            "node": "데이터 상위 분류",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split": {
+      "main": [
+        [
+          {
+            "node": "embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "searchEmbedding": {
+      "main": [
+        [
+          {
+            "node": "질문 상위 분류",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetData": {
+      "main": [
+        [
+          {
+            "node": "matchData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "matchData": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatMessage": {
+      "main": [
+        [
+          {
+            "node": "searchEmbedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "데이터 상위 분류",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "질문 상위 분류",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ans Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "데이터 상위 분류": {
+      "main": [
+        [
+          {
+            "node": "복지 Talbe Insert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "기타 Table Insert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "질문 상위 분류": {
+      "main": [
+        [
+          {
+            "node": "GetData",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GetOrderData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "matchData1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetOrderData": {
+      "main": [
+        [
+          {
+            "node": "matchData1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1189604ecb5373de69a0c7f148657d41d5e19220759bb238c79305715d6edddb"
+  }
+}

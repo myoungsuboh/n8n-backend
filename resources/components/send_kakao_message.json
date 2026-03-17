@@ -1,0 +1,52 @@
+{
+  "description": "이 템플릿은 카카오 메시지 전송용입니다.",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://kapi.kakao.com/v2/api/talk/memo/default/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded;charset=utf-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "template_object",
+              "value": "={     \n  \"object_type\": \"text\",\n  \"text\": {{ JSON.stringify($json.content.parts[0].text) }},\n  \"link\": {\n    \"web_url\": \"https://hninc365.sharepoint.com/:f:/s/DX/IgA86SPVRJi8SYoaM76I2sq8AUVEezgdCMgKioAvvCdWM40?e=N8Ll4K\",\n    \"mobile_web_url\": \"https://hninc365.sharepoint.com/:f:/s/DX/IgA86SPVRJi8SYoaM76I2sq8AUVEezgdCMgKioAvvCdWM40?e=N8Ll4K\"         \n  },\n  \"button_title\": \"주간보고 작성\"\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -240,
+        -288
+      ],
+      "id": "94237676-4772-457e-858c-cb347fd23b04",
+      "name": "HTTP Request",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "UABydmCnknNtku5a",
+          "name": "Unnamed credential"
+        }
+      }
+    }
+  ],
+  "connections": {},
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1189604ecb5373de69a0c7f148657d41d5e19220759bb238c79305715d6edddb"
+  }
+}

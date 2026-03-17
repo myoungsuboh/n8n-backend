@@ -1,0 +1,202 @@
+{
+  "description": "이 템플릿은 기본 메일 전송용입니다.",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "postMail",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -432,
+        -96
+      ],
+      "id": "5ee0f577-4401-42d3-a936-c4e2c11341e3",
+      "name": "Webhook",
+      "webhookId": "04c2ca02-49bf-4d0a-99f3-825f88b99043"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🛠️ 너는 메일 전달 AI 에이전트야.\n너의 주 업무는 메일을 작성해서 전달하는 업무야.\n\n[행동 수칙]\n1. 도구(Tool) 사용 및 데이터 보안\n- 'Get Email' 도구로 조회한 이메일 주소는 발송용으로만 사용하며 보안을 철저히 유지해요.\n- 'Send a message in Gmail' 도구를 사용할 때, 메일 본문이 깨지지 않도록 반드시 **HTML 형식**을 활성화해서 보내야 해요.\n\n2. 이메일 제목 작성 및 인코딩 규칙 (🚨 최우선 순위)\n- 제목이 한글인 경우 깨지지 않게 변환해서 보내줘. \n- 부득이하게 한글 깨짐 현상을 해결 못한다면 영어로 번역해.\n\n3. 이메일 제목 내용 규칙\n- **1순위:** [질문]에 사용자가 제목을 구체적으로 지정했다면, 그 제목을 사용하세요. 대신 글자가 깨지지 않게 조심해.\n- **2순위:** 지정된 제목이 없다면, 내용을 요약하되 **받는 사람이 기분 좋을 만한 정중하고 긍정적인 제목**을 창작해.\n\n- **금지:** \"노예\", \"강제\", \"일해라\" 등 명령조나 부정적인 단어 사용 금지.\n- **추천 예시:** \"요청하신 응원의 이미지가 도착했습니다! 🎁\", \"오늘도 파이팅! 활기찬 하루 보내세요 ✨\"\n\n5. 톤앤매너\n- 옆자리 동료처럼 부드러운 \"해요체\"를 사용하세요.\n- 메일 마지막엔 항상 따뜻한 응원의 한마디를 덧붙여줘요.\n- **오늘의 명언**도 짧게 한 줄 넣어주고, 글씨는 굵게(Bold) 처리해서 강조해 주세요.\n\n6. 메일 전송 로직\n- [질문]에 메일 보내달라는 의도가 포함되어 있다면 무조건 메일을 보내야 합니다.\n- 전송 대상(이메일 주소)이 [질문]에 없다면 'Get Email' 도구를 사용하여 주소를 확보하고, 조회된 **모든 대상**에게 보내주세요.\n\n[질문]\n{{ $('Webhook').item.json.body.message }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -208,
+        -96
+      ],
+      "id": "bfc4b9b0-77f8-4b7d-b583-0d3d8431b1d8",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        112
+      ],
+      "id": "37d42c30-38e6-43b6-8733-c4124645df38",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0SeTM1EBQme34hcs",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.body.sessionId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -208,
+        112
+      ],
+      "id": "88d8407f-e969-41b3-8d03-128add6b35d2",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        -48,
+        112
+      ],
+      "id": "3395c0cc-ce3a-42af-8a7a-f132d6798212",
+      "name": "Send a message in Gmail",
+      "webhookId": "97e3b59c-b29f-47a6-bd4e-94c2c6158f7f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "s5L4VodXvoDDkB2X",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "OINxPCLC5hYEC6rq",
+          "mode": "list",
+          "cachedResultName": "email",
+          "cachedResultUrl": "/projects/rUzZX2dYKswL43yd/datatables/OINxPCLC5hYEC6rq"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1.1,
+      "position": [
+        112,
+        112
+      ],
+      "id": "9589d094-ecd6-491b-8f87-a37060666f83",
+      "name": "Get row(s) in Data table"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"answer\": {{ JSON.stringify($json.output) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        144,
+        -96
+      ],
+      "id": "cf5271b4-75ad-4d7e-a396-97213b523659",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in Data table": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1189604ecb5373de69a0c7f148657d41d5e19220759bb238c79305715d6edddb"
+  }
+}

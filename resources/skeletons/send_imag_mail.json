@@ -1,0 +1,278 @@
+{
+  "description": "이 템플릿은 사용자의 요청에 따라 이미지를 생성하여 메일에 첨부하여 전송합니다.",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🛠️ 너는 메일 전달 AI 에이전트야.\n너의 주 업무는 이미지를 메일에 첨부하여 보내는 업무야.\n\n[행동 수칙]\n\n1. 도구(Tool) 사용 및 데이터 보안\n- 'Get Email' 도구로 조회한 이메일 주소는 발송용으로만 사용하며 보안을 철저히 유지해요.\n- 'Send a message in Gmail' 도구를 사용할 때, 메일 본문이 깨지지 않도록 반드시 **HTML 형식**을 활성화해서 보내야 해요.\n\n2. 이메일 제목 작성 및 인코딩 규칙 (🚨 최우선 순위)\n- 제목은 항상 영어로 번역해줘.\n\n3. 이메일 제목 내용 규칙\n- **1순위:** [질문]에 사용자가 제목을 구체적으로 지정했다면, 그 제목을 사용하세요.\n- **2순위:** 지정된 제목이 없다면, 이미지 내용을 요약하되 **받는 사람이 기분 좋을 만한 정중하고 긍정적인 제목**을 창작하세요.\n- **금지:** \"노예\", \"강제\", \"일해라\" 등 명령조나 부정적인 단어 사용 금지.\n- **추천 예시:** \"요청하신 응원의 이미지가 도착했습니다! 🎁\", \"오늘도 파이팅! 활기찬 하루 보내세요 ✨\"\n\n4. 생성된 이미지 처리\n- **이미지는 시스템이 자동으로 메일에 첨부합니다.**\n\n5. 톤앤매너\n- 옆자리 동료처럼 부드러운 \"해요체\"를 사용하세요.\n- 메일 마지막엔 항상 따뜻한 응원의 한마디를 덧붙여줘요.\n- **오늘의 명언**도 짧게 한 줄 넣어주고, 글씨는 굵게(Bold) 처리해서 강조해 주세요.\n\n6. 메일 전송 로직\n- [질문]에 메일 보내달라는 의도가 포함되어 있다면 무조건 메일을 보내야 합니다.\n- 전송 대상(이메일 주소)이 [질문]에 없다면 'Get Email' 도구를 사용하여 주소를 확보하고, 조회된 **모든 대상**에게 보내주세요.\n\n[질문]\n{{ $('Webhook').item.json.body.message }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        944,
+        464
+      ],
+      "id": "8af81ea0-4b28-440a-8399-c7ac8c17d979",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', `이메일 제목`, 'string') }}",
+        "message": "={{ $fromAI('Message', '메일 본문을 작성해주세요', 'string') }}\n<br><br>\n<img src=\"data:image/png;base64,{{ $('Code in JavaScript').item.json.image_url }}\" width=\"100%\">",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        992,
+        688
+      ],
+      "id": "6d413546-d2cc-4049-aaf4-738173538a79",
+      "name": "Send a message in Gmail",
+      "webhookId": "bfc1f87b-015c-4b9a-baf4-fb177f5c33bf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "s5L4VodXvoDDkB2X",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        800,
+        688
+      ],
+      "id": "a09eec4c-1171-4cdb-a778-a304d83bcc4e",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0SeTM1EBQme34hcs",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "OINxPCLC5hYEC6rq",
+          "mode": "list",
+          "cachedResultName": "email",
+          "cachedResultUrl": "/projects/rUzZX2dYKswL43yd/datatables/OINxPCLC5hYEC6rq"
+        },
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}"
+      },
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1.1,
+      "position": [
+        1136,
+        688
+      ],
+      "id": "9e3f3332-e185-4bde-b755-fa341a717ad4",
+      "name": "Get Email"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "postImgMail",
+        "responseMode": "=responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        176,
+        464
+      ],
+      "id": "c2d646d6-7ab8-4bb5-90d7-3b188e7fa763",
+      "name": "Webhook",
+      "webhookId": "91fa1b0e-57ba-4cb1-9a0c-16e880cf0017"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "image/png"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inputs",
+              "value": "={{ $json.body.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        432,
+        464
+      ],
+      "id": "055a7d32-759d-4681-9f52-7270ba138dcf",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        176,
+        656
+      ],
+      "id": "6305d9df-c75b-4e13-9fcc-faec711d6e0a",
+      "name": "When chat message received",
+      "webhookId": "f234cd46-9139-4bef-8090-f2b862a8873e"
+    },
+    {
+      "parameters": {
+        "jsCode": "// HTTP Request 노드에서 받은 이미지 바이너리 'data'의 알맹이를 가져옵니다.\nconst binaryProperty = items[0].binary.data;\n\n// 바이너리 데이터를 Base64 텍스트로 강제 변환합니다.\nconst base64String = await this.helpers.getBinaryDataBuffer(0, 'data').then(buffer => buffer.toString('base64'));\n\nreturn [{\n  json: {\n    // 이제 image_url에는 'filesystem-v2'가 아닌 'iVBORw0...' 같은 실제 데이터가 담깁니다.\n    image_url: base64String\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        464
+      ],
+      "id": "5874a20d-7885-4285-b1f3-56bc3510e313",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"answer\": {{ JSON.stringify($('AI Agent').first().json.output) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1248,
+        464
+      ],
+      "id": "baaf3815-235b-462c-8957-0b5195d10e9d",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1189604ecb5373de69a0c7f148657d41d5e19220759bb238c79305715d6edddb"
+  }
+}
