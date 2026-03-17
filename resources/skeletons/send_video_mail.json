@@ -268,7 +268,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "ceQ08ttyU7No90UiV38cPrtpFEkezvFZhofPgbZgTCA0OATOdoPixTPR"
+              "value": "YOUR_PEXELS_TOKEN_HERE"
             }
           ]
         },
